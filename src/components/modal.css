@@ -1,0 +1,10 @@
+.modal-custom {
+    width: 500px; /* Ajusta el ancho según tus necesidades */
+    height: 600px; /* Ajusta la altura según tus necesidades */
+  }
+  
+  .modal-overlay-custom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
