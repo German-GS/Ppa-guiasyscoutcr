@@ -6,6 +6,7 @@ import { ForgotPassword } from "./components/ForPassword.js";
 import { AuthProvider } from "./context/authContext.js";
 import { ProtectedRout } from "./components/ProtectedRoute.js";
 function App() {
+  
   return (
       <div className="bg-primary min-h-screen text-white w-full">
         <AuthProvider>

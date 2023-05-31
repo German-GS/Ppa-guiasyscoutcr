@@ -5,22 +5,46 @@ import { ListPpa } from "./ListPpa";
 import { InputForm } from "./InputForm";
 import { savePpa, analytics } from "../firebase";
 import Swal from "sweetalert2";
+import { getCalendarClient } from '../GoogleApi';
 
 export function Home() {
   const { loading } = useAuth();
   const [ppaData, setPpaData] = useState({});
   const registerButtonRef = useRef(null);
 
+  
   useEffect(() => {
-    const registerButton = registerButtonRef.current;
+    const handleRegisterButtonClick = () => {
+      // Registra el evento de clic en el botón de registro
+      analytics.logEvent("registro_ppa", { location: "formulario_ppa" });
+      // Aquí puedes agregar el código para realizar el registro de usuario
+    };
+  
+    const registerButton = document.getElementById("register-button");
     if (registerButton) {
-      registerButton.addEventListener("click", () => {
-        // Registra el evento de clic en el botón de registro
-        analytics.logEvent("registro_ppa", { location: "formulario_ppa" });
-        // Aquí puedes agregar el código para realizar el registro de usuario
-      });
+      registerButton.addEventListener("click", handleRegisterButtonClick);
     }
+  
+    return () => {
+      // Limpiar el listener al desmontar el componente
+      if (registerButton) {
+        registerButton.removeEventListener("click", handleRegisterButtonClick);
+      }
+    };
   }, []);
+
+  const handleGoogleCalendar = async () => {
+    try {
+      const calendar = await getCalendarClient();
+      const response = await calendar.events.list({
+        calendarId: 'primary',
+      });
+  
+      console.log(response.data);
+    } catch (error) {
+      console.error('Error al obtener los eventos del calendario:', error);
+    }
+  };
 
   const handleSavePpa = async () => {
     try {
@@ -151,6 +175,15 @@ export function Home() {
             >
               Registrar PPA
             </button>
+
+            <button
+            id="Google Calendar"
+            type="submit"
+            className="max-w-200 text-white bg-secundaryColor hover:bg-scout focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-scout dark:hover:bg-scout dark:focus:ring-blue-800 mb-3 "
+            onClick={handleGoogleCalendar}
+          >
+            Calendario
+          </button>
           </div>
         </form>
         <div>
