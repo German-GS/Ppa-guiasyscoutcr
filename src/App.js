@@ -5,6 +5,8 @@ import { Register } from "./components/Register.js";
 import { ForgotPassword } from "./components/ForPassword.js";
 import { AuthProvider } from "./context/authContext.js";
 import { ProtectedRout } from "./components/ProtectedRoute.js";
+// Importa los estilos de react-big-calendar
+import "react-big-calendar/lib/css/react-big-calendar.css";
 function App() {
   
   return (
