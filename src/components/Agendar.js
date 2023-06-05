@@ -1,10 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faCheck } from "@fortawesome/free-solid-svg-icons";
 
-export function Agendar({ onSave }) {
+export function Agendar({ onSavePpa }) {
   const [inputs, setInputs] = useState([{ id: 1, texto: "", fecha: "" }]);
   const [guardado, setGuardado] = useState(false);
+
+  const actividadRef = useRef();
+  const fechaRef = useRef();
+
+  const handleAgendarClick = () => {
+    const actividad = inputs[0].texto;
+    const fecha = inputs[0].fecha;
+
+    if (actividad && fecha) {
+      const data = {
+        actividad,
+        fecha,
+      };
+
+      onSavePpa(data);
+
+      setInputs([{ id: 1, texto: "", fecha: "" }]);
+      setGuardado(true);
+    } else {
+      console.log("Los datos estan vacios");
+    }
+  };
 
   const handleInputChange = (index, event) => {
     const { name, value } = event.target;
@@ -24,21 +46,23 @@ export function Agendar({ onSave }) {
     setInputs(updatedInputs);
   };
 
-  const handleSave = () => {
-    onSave(inputs);
-    setInputs([{ id: 1, texto: "", fecha: "" }]);
-    setGuardado(true);
-  };
+  console.log("Actividad:", inputs);
 
   return (
     <div>
       <div className="flex mb-4">
-        <label className="text-xl block mb-2 text-sm font-medium text-gray-400">
-          Actividad
-        </label>
-        <label className="text-xl block mb-2 text-sm font-medium text-gray-400">
-          Fecha
-        </label>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mx=2 p-2">
+          <div className="lg:col-span-2 mr-80">
+            <label className="text-xl block mb-2 text-sm font-medium text-gray-400">
+              Actividad
+            </label>
+          </div>
+          <div className="lg:col-span-1">
+            <label className="text-xl block mb-2 text-sm font-medium text-gray-400">
+              Fecha
+            </label>
+          </div>
+        </div>
         <div className="w-12" /> {/* Espacio para los botones */}
       </div>
       {inputs.map((input, index) => (
@@ -67,7 +91,7 @@ export function Agendar({ onSave }) {
             <button
               type="button"
               onClick={handleAddInput}
-              className="bg-scout text-white rounded-md px-3 py-2.5 hover:bg-scout-100 focus:outline-none"
+              className="bg-scout text-white rounded-md px-3 py-2.5 hover:bg-scout-100 focus:outline-none ml-2"
             >
               <FontAwesomeIcon icon={faPlus} />
             </button>
@@ -85,7 +109,7 @@ export function Agendar({ onSave }) {
       ))}
       <button
         type="button"
-        onClick={handleSave}
+        onClick={handleAgendarClick}
         className={`bg-rover1 text-white rounded-md px-3 py-2.5 hover:bg-rover-100 focus:outline-none mx-1${
           guardado ? " bg-rover1" : ""
         }`}

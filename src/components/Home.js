@@ -9,8 +9,7 @@ import Swal from "sweetalert2";
 
 export function Home() {
   const { loading } = useAuth();
-  const [ppaData, setPpaData] = useState({});
-  const registerButtonRef = useRef(null);
+  const [ppaData, setPpaData] = useState([]);
 
   useEffect(() => {
     const handleRegisterButtonClick = () => {
@@ -53,10 +52,10 @@ export function Home() {
     }
   };
 
-  const handleInputChange = (field, data) => {
+  const handleInputChange = (key, data) => {
     setPpaData((prevState) => ({
       ...prevState,
-      [field]: data,
+      [key]: data,
     }));
   };
 
@@ -155,7 +154,9 @@ export function Home() {
             <div>
               <h1 className="text-3xl mb-5 mt-5 p-2">Mi PPA</h1>
               <hr />
-              <Agendar/>
+              <Agendar
+                onSavePpa={(data) => handleInputChange("actividad", data)}
+              />
             </div>
             <button
               id="register-button"
@@ -168,7 +169,7 @@ export function Home() {
         </form>
         <div>
           <hr className="mt-20" />
-          <ListPpa ppaData={ppaData} />
+          <ListPpa ppaData={Object.values(ppaData)} />
         </div>
       </div>
       <div></div>
