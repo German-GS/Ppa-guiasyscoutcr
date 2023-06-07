@@ -53,13 +53,17 @@ export function Ppa({ selectedPpa, closeModal }) {
     ["Sociabilidad", selectedPpa.sociabilidad],
     ["Creatividad", selectedPpa.creatividad],
     ...filteredValues,
-    ["Actividad", selectedPpa.actividad.actividad], // Acceder a la propiedad 'actividad' del objeto 'actividad'
-    ["Fecha", selectedPpa.actividad.fecha], // Acceder a la propiedad 'fecha' del objeto 'actividad'
-  ].sort((a, b) => {
-    if (a[0] === "Actividad") return 1;
-    if (b[0] === "Actividad") return -1;
-    return 0;
-  });
+    selectedPpa.actividad
+      ? ["Actividad", selectedPpa.actividad.actividad]
+      : null,
+    selectedPpa.actividad ? ["Fecha", selectedPpa.actividad.fecha] : null,
+  ]
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (a[0] === "Actividad") return 1;
+      if (b[0] === "Actividad") return -1;
+      return 0;
+    });
 
   return (
     <div>
@@ -74,9 +78,7 @@ export function Ppa({ selectedPpa, closeModal }) {
               <ul>
                 {selectedPpa.suenos.map((item, i) => (
                   <li key={i}>
-                    <span className="text-sm font-semibold mr-2">
-                      {i + 1}
-                    </span>
+                    <span className="text-sm font-semibold mr-2">{i + 1}</span>
                     {item}
                   </li>
                 ))}
@@ -94,9 +96,7 @@ export function Ppa({ selectedPpa, closeModal }) {
               <ul>
                 {selectedPpa.retos.map((item, i) => (
                   <li key={i}>
-                    <span className="text-sm font-semibold mr-2">
-                      {i + 1}
-                    </span>
+                    <span className="text-sm font-semibold mr-2">{i + 1}</span>
                     {item}
                   </li>
                 ))}
@@ -114,9 +114,7 @@ export function Ppa({ selectedPpa, closeModal }) {
               <ul>
                 {selectedPpa.fortalezas.map((item, i) => (
                   <li key={i}>
-                    <span className="text-sm font-semibold mr-2">
-                      {i + 1}
-                    </span>
+                    <span className="text-sm font-semibold mr-2">{i + 1}</span>
                     {item}
                   </li>
                 ))}
@@ -142,9 +140,7 @@ export function Ppa({ selectedPpa, closeModal }) {
               <ul>
                 {selectedPpa.espiritualidad.map((item, i) => (
                   <li key={i}>
-                    <span className="text-sm font-semibold mr-2">
-                      {i + 1}
-                    </span>
+                    <span className="text-sm font-semibold mr-2">{i + 1}</span>
                     {item}
                   </li>
                 ))}
@@ -169,17 +165,28 @@ export function Ppa({ selectedPpa, closeModal }) {
             <p>{selectedPpa.corporabilidad}</p>
           </div>
         </div>
-        <hr className="my-4" />
-        <h2 className="text-lg font-bold ml-2">Actividades</h2>
-        <div className="grid grid-cols-2 gap-4 p-2">
-          <div>
-            <h2 className="text-lg font-bold">Actividad</h2>
-            <p>{selectedPpa.actividad.actividad}</p>
-          </div>
-          <div>
-            <h2 className="text-lg font-bold">Fecha</h2>
-            <p>{selectedPpa.actividad.fecha}</p>
-          </div>
+        <div className="mt-6">
+          <hr className="my-4" />
+          <h2 className="text-lg font-bold ml-2">Actividades</h2>
+          {Array.isArray(selectedPpa.actividad) &&
+          selectedPpa.actividad.length > 0 ? (
+            <div className="p-2">
+              {selectedPpa.actividad.map((item, index) => (
+                <div key={index} className="flex">
+                  <div className="mr-4">
+                    <h2 className="text-lg font-bold mr-40">Actividad</h2>
+                    <p>{item.actividad}</p>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold">Fecha</h2>
+                    <p>{item.fecha}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>No hay actividad registrada</p>
+          )}
         </div>
         <div className="mt-6 flex justify-end">
           <button
@@ -192,5 +199,4 @@ export function Ppa({ selectedPpa, closeModal }) {
       </div>
     </div>
   );
-  
 }

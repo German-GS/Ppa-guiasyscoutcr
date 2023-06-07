@@ -10,21 +10,17 @@ export function Agendar({ onSavePpa }) {
   const fechaRef = useRef();
 
   const handleAgendarClick = () => {
-    const actividad = inputs[0].texto;
-    const fecha = inputs[0].fecha;
-
-    if (actividad && fecha) {
-      const data = {
-        actividad,
-        fecha,
-      };
-
-      onSavePpa(data);
-
+    const datos = inputs.map((input) => ({
+      actividad: input.texto,
+      fecha: input.fecha,
+    }));
+  
+    if (datos.length > 0) {
+      onSavePpa(datos);
       setInputs([{ id: 1, texto: "", fecha: "" }]);
       setGuardado(true);
     } else {
-      console.log("Los datos estan vacios");
+      console.log("No se ingresaron datos");
     }
   };
 
