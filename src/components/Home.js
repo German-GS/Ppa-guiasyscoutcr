@@ -17,6 +17,7 @@ export function Home() {
   const [currentPpaId, setCurrentPpaId] = useState(null);
   const [selectedPpa, setSelectedPpa] = useState(null);
   const registerButtonRef = useRef(null);
+  console.log("Usuario autenticado:", user);
 
   const refs = {
     suenos: useRef(),
@@ -133,9 +134,9 @@ export function Home() {
         </h1>
 
         <form id="ppa-form" onSubmit={handleSavePpa} className="space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mobile-stack">
             {Object.entries(refs).filter(([key]) => key !== "actividad").map(([key, ref]) => (
-              <div key={key} className="bg-gray-50 p-4 rounded-lg">
+              <div key={key} className="bg-gray-50 p-4 rounded-lg mobile-input-wrapper">
                 <h2 className="text-xl font-semibold mb-2 text-gray-700">{fieldTitles[key]}</h2>
                 <InputForm ref={ref} placeholder={fieldPlaceholders[key]} />
               </div>
@@ -183,6 +184,15 @@ export function Home() {
           <ListPpa onEditPpa={loadPpaForEditing} />
         </div>
       </div>
+      <footer className="bg-scout text-white text-center py-4 mt-10">
+      <div className="container mx-auto px-4">
+        <p className="text-sm">
+          Herramienta Digital de PPA    ·     Desarrollado por German García Siles     ·    &copy; 2025 v2.0
+        </p>
+      </div>
+    </footer>
+
     </div>
+    
   );
 }

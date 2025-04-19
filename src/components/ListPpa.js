@@ -4,10 +4,10 @@ import Swal from "sweetalert2";
 import Modal from "react-modal";
 import { Ppa } from "./Ppa";
 import { formatDateTime } from "../utils/dateUtils";
-import { useAuth } from "../context/authContext"; // ✅ Importar el usuario autenticado
+import { useAuth } from "../context/authContext";
 
 export function ListPpa({ onEditPpa }) {
-  const { user } = useAuth(); // ✅ Obtener UID del usuario
+  const { user } = useAuth();
   const [realtimePpaData, setRealtimePpaData] = useState([]);
   const [selectedPpa, setSelectedPpa] = useState(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -55,36 +55,25 @@ export function ListPpa({ onEditPpa }) {
       console.log("Usuario no autenticado");
       return;
     }
-  
-    console.log(`Buscando PPAs para usuario: ${user.uid}`);
+
     setLoading(true);
-  
+
     const unsubscribe = onGetPpas(user.uid, (ppas) => {
-      console.log("PPAs recibidos:", ppas);
-      
-      if (!ppas || ppas.length === 0) {
-        console.log("No se encontraron PPAs para este usuario");
-      }
-  
       const sortedData = ppas.sort((a, b) => {
         const dateA = a.createdAt?.getTime() || 0;
         const dateB = b.createdAt?.getTime() || 0;
         return dateB - dateA;
       });
-  
+
       setRealtimePpaData(sortedData);
       setLoading(false);
     }, (error) => {
       console.error("Error en listener:", error);
       setLoading(false);
     });
-  
-    return () => {
-      console.log("Limpiando suscripción");
-      unsubscribe?.();
-    };
+
+    return () => unsubscribe?.();
   }, [user?.uid]);
-  
 
   if (loading) {
     return (
@@ -103,47 +92,32 @@ export function ListPpa({ onEditPpa }) {
           <p className="text-gray-500">No hay PPAs registrados aún</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-4 py-3 text-left text-lg font-semibold text-gray-700">#</th>
-                <th className="px-4 py-3 text-left text-lg font-semibold text-gray-700">Fecha y Hora de Creación</th>
-                <th className="px-4 py-3 text-left text-lg font-semibold text-gray-700">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {realtimePpaData.map((ppa, index) => (
-                <tr key={ppa.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">{index + 1}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {formatDateTime(ppa.createdAt)}
-                    {ppa.modifiedAt && (
-                      <div className="text-xs text-gray-500">
-                        Modificado: {formatDateTime(ppa.modifiedAt)}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => openModal(ppa)}
-                        className="btn-scout-red text-white px-4 py-2 rounded-lg hover:bg-[#FFA400] transition-colors"
-                      >
-                        Ver Detalles
-                      </button>
-                      <button
-                        onClick={() => eliminarPpa(ppa.id)}
-                        className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-4">
+          {realtimePpaData.map((ppa, index) => (
+            <div key={ppa.id} className="bg-gray-50 p-4 rounded-lg shadow-sm flex flex-col lg:flex-row lg:justify-between lg:items-center">
+              <div className="mb-4 lg:mb-0">
+                <span className="block font-semibold text-gray-700">{index + 1}. Fecha y Hora de Creación:</span>
+                <p>{formatDateTime(ppa.createdAt)}</p>
+                {ppa.modifiedAt && (
+                  <p className="text-xs text-gray-500">Modificado: {formatDateTime(ppa.modifiedAt)}</p>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 space-y-2 sm:space-y-0">
+                <button
+                  onClick={() => openModal(ppa)}
+                  className="btn-scout-red text-white px-4 py-2 rounded-lg hover:bg-[#FFA400] transition-colors"
+                >
+                  Ver Detalles
+                </button>
+                <button
+                  onClick={() => eliminarPpa(ppa.id)}
+                  className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

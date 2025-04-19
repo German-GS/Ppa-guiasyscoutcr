@@ -111,6 +111,7 @@
 .delete-btn:hover {
   color: var(--color-red-700);
 } 
+
 /* Animaciones */
 @keyframes App-logo-spin {
   from {
@@ -135,6 +136,43 @@
   
   .mobile-stack {
     flex-direction: column !important;
+  }
+
+  .p-4 {
+    padding: 1rem !important;
+  }
+
+  .space-y-6 > * + * {
+    margin-top: 1rem !important;
+  }
+
+  .text-xl {
+    font-size: 1.25rem !important;
+  }
+
+  .rounded-lg {
+    border-radius: 0.75rem !important;
+  }
+
+  .btn-scout-red,
+  .btn-ppa-primary {
+    width: 100%;
+    font-size: 1rem;
+    padding: 0.75rem;
+    justify-content: center;
+  }
+
+  .grid {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .gap-6 {
+    gap: 1rem !important;
+  }
+
+  .mobile-input-wrapper {
+    padding-bottom: 1rem;
   }
 }
 
