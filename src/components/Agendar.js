@@ -1,116 +1,184 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash, faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
 
-export function Agendar({ onSavePpa }) {
-  const [inputs, setInputs] = useState([{ id: 1, texto: "", fecha: "" }]);
-  const [guardado, setGuardado] = useState(false);
+export function Agendar({ onSave, initialData = [] }) {
+  const [activities, setActivities] = useState(() => {
+    // Mejor manejo de datos iniciales
+    if (initialData && initialData.length > 0) {
+      return initialData.map((item, index) => ({
+        id: Date.now() + index,
+        actividad: item.actividad || "",
+        fecha: item.fecha || "",
+        addedToCalendar: false
+      }));
+    }
+    return [{ id: Date.now(), actividad: "", fecha: "", addedToCalendar: false }];
+  });
 
-  const actividadRef = useRef();
-  const fechaRef = useRef();
-
-  const handleAgendarClick = () => {
-    const datos = inputs.map((input) => ({
-      actividad: input.texto,
-      fecha: input.fecha,
-    }));
-  
-    if (datos.length > 0) {
-      onSavePpa(datos);
-      setInputs([{ id: 1, texto: "", fecha: "" }]);
-      setGuardado(true);
-    } else {
-      console.log("No se ingresaron datos");
+  // Formatear fecha para Google Calendar
+  const formatDateForGoogleCalendar = (dateString) => {
+    if (!dateString) return "";
+    try {
+      const date = new Date(dateString);
+      return date.toISOString().replace(/-|:|\.\d{3}/g, "");
+    } catch (error) {
+      console.error("Error formateando fecha:", error);
+      return "";
     }
   };
 
-  const handleInputChange = (index, event) => {
+  // Abrir Google Calendar con los datos de la actividad
+  const addToGoogleCalendar = (actividad, fecha) => {
+    if (!actividad || !fecha) return;
+
+    try {
+      const startDate = new Date(fecha);
+      const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // +1 hora
+
+      const params = new URLSearchParams({
+        action: "TEMPLATE",
+        text: `PPA: ${actividad}`,
+        dates: `${formatDateForGoogleCalendar(startDate)}/${formatDateForGoogleCalendar(endDate)}`,
+        details: "Actividad creada desde la app PPA de Scouts",
+        sf: true,
+        output: "xml"
+      });
+
+      window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, '_blank');
+      
+      // Marcar como añadido al calendario
+      setActivities(prevActivities =>
+        prevActivities.map(activity =>
+          activity.actividad === actividad && activity.fecha === fecha 
+            ? { ...activity, addedToCalendar: true }
+            : activity
+        )
+      );
+    } catch (error) {
+      console.error("Error al agregar a Google Calendar:", error);
+    }
+  };
+
+  // Notificar al componente padre cuando cambien las actividades
+  useEffect(() => {
+    const actividadesFiltradas = activities
+      .filter(activity => activity.actividad.trim() !== "" || activity.fecha.trim() !== "")
+      .map(activity => ({
+        actividad: activity.actividad,
+        fecha: activity.fecha
+      }));
+    
+    onSave(actividadesFiltradas);
+  }, [activities, onSave]);
+
+  const handleInputChange = (id, event) => {
     const { name, value } = event.target;
-    const updatedInputs = [...inputs];
-    updatedInputs[index][name] = value;
-    setInputs(updatedInputs);
+    setActivities(prevActivities =>
+      prevActivities.map(activity =>
+        activity.id === id 
+          ? { 
+              ...activity, 
+              [name]: value, 
+              addedToCalendar: false 
+            } 
+          : activity
+      )
+    );
   };
 
-  const handleAddInput = () => {
-    const newId = inputs.length + 1;
-    setInputs([...inputs, { id: newId, texto: "", fecha: "" }]);
+  const handleAddActivity = () => {
+    setActivities([...activities, { 
+      id: Date.now(), 
+      actividad: "", 
+      fecha: "", 
+      addedToCalendar: false 
+    }]);
   };
 
-  const handleRemoveInput = (index) => {
-    const updatedInputs = [...inputs];
-    updatedInputs.splice(index, 1);
-    setInputs(updatedInputs);
+  const handleRemoveActivity = (id) => {
+    if (activities.length > 1) {
+      setActivities(prevActivities => 
+        prevActivities.filter(activity => activity.id !== id)
+      );
+    }
   };
-
-  console.log("Actividad:", inputs);
 
   return (
-    <div>
-      <div className="flex mb-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mx=2 p-2">
-          <div className="lg:col-span-2 mr-80">
-            <label className="text-xl block mb-2 text-sm font-medium text-gray-400">
-              Actividad
-            </label>
-          </div>
-          <div className="lg:col-span-1">
-            <label className="text-xl block mb-2 text-sm font-medium text-gray-400">
-              Fecha
-            </label>
-          </div>
+    <div className="space-y-4">
+      <div className="grid grid-cols-12 gap-4 items-center mb-2">
+        <div className="col-span-7">
+          <label className="text-sm font-medium text-gray-700">Actividad</label>
         </div>
-        <div className="w-12" /> {/* Espacio para los botones */}
+        <div className="col-span-3">
+          <label className="text-sm font-medium text-gray-700">Fecha</label>
+        </div>
+        <div className="col-span-2 flex justify-center">
+          <span className="text-xs text-gray-500">Acciones</span>
+        </div>
       </div>
-      {inputs.map((input, index) => (
-        <div key={input.id} className="flex mb-4">
-          <div className="flex-grow mr-4">
+
+      {activities.map((activity) => (
+        <div key={activity.id} className="grid grid-cols-12 gap-4 items-center mb-3">
+          <div className="col-span-7">
             <input
               type="text"
-              name="texto"
-              value={input.texto}
-              onChange={(event) => handleInputChange(index, event)}
-              className="text-white border-none text-sm rounded-lg bg-gris block w-full p-2.5 dark:bg-gris dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 mb-4"
-              placeholder="Ingrese actividad"
+              name="actividad"
+              value={activity.actividad}
+              onChange={(event) => handleInputChange(activity.id, event)}
+              className="w-full p-2.5 text-sm text-gray-800 bg-gray-100 rounded-lg border border-gray-300 focus:ring-scout focus:border-scout"
+              placeholder="Descripción de la actividad"
+              aria-label="Descripción de la actividad"
             />
           </div>
-          <div className="flex-grow-0 w-48">
+          <div className="col-span-3">
             <input
               type="date"
               name="fecha"
-              value={input.fecha}
-              onChange={(event) => handleInputChange(index, event)}
-              className="text-white border-none text-sm rounded-lg bg-gris block w-full p-2.5 dark:bg-gris dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 mb-4"
-              placeholder="Seleccione la fecha"
+              value={activity.fecha}
+              onChange={(event) => handleInputChange(activity.id, event)}
+              className="w-full p-2.5 text-sm text-gray-800 bg-gray-100 rounded-lg border border-gray-300 focus:ring-scout focus:border-scout"
+              aria-label="Fecha de la actividad"
             />
           </div>
-          {index === inputs.length - 1 && (
-            <button
-              type="button"
-              onClick={handleAddInput}
-              className="bg-scout text-white rounded-md px-3 py-2.5 hover:bg-scout-100 focus:outline-none ml-2"
-            >
-              <FontAwesomeIcon icon={faPlus} />
-            </button>
-          )}
-          {inputs.length > 1 && (
-            <button
-              type="button"
-              onClick={() => handleRemoveInput(index)}
-              className="bg-rover1 text-white rounded-md mx-1 px-4 py-2 hover:bg-rover-100 focus:outline-none focus:ring-2 focus:ring-rover-100"
-            >
-              X
-            </button>
-          )}
+          <div className="col-span-2 flex justify-center space-x-2">
+            {activity.actividad && activity.fecha && (
+              <button
+                type="button"
+                onClick={() => addToGoogleCalendar(activity.actividad, activity.fecha)}
+                className={`p-2 rounded-full focus:outline-none ${
+                  activity.addedToCalendar 
+                    ? "text-green-500 hover:text-green-700 bg-green-50" 
+                    : "text-blue-500 hover:text-blue-700 bg-blue-50"
+                }`}
+                title="Añadir a Google Calendar"
+                aria-label="Añadir a calendario"
+              >
+                <FontAwesomeIcon icon={faCalendarAlt} />
+              </button>
+            )}
+            {activities.length > 1 && (
+              <button
+                type="button"
+                onClick={() => handleRemoveActivity(activity.id)}
+                className="p-2 text-red-500 hover:text-red-700 focus:outline-none bg-red-50 rounded-full"
+                aria-label="Eliminar actividad"
+              >
+                <FontAwesomeIcon icon={faTrash} />
+              </button>
+            )}
+          </div>
         </div>
       ))}
+
       <button
         type="button"
-        onClick={handleAgendarClick}
-        className={`bg-rover1 text-white rounded-md px-3 py-2.5 hover:bg-rover-100 focus:outline-none mx-1${
-          guardado ? " bg-rover1" : ""
-        }`}
+        onClick={handleAddActivity}
+        className="btn-scout-red text-white flex items-center text-sm focus:outline-none px-3 py-2 rounded mt-2"
+        aria-label="Agregar otra actividad"
       >
-        {guardado ? <FontAwesomeIcon icon={faCheck} /> : "Guardar"}
+        <FontAwesomeIcon icon={faPlus} className="mr-1" />
+        Agregar otra actividad
       </button>
     </div>
   );

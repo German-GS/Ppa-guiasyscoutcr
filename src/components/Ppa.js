@@ -1,197 +1,203 @@
 import React, { useState, useEffect } from "react";
-import { getPpa } from "../firebase";
+import { onPpaUpdate } from "../firebase";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEdit, faPrint, faTimes } from "@fortawesome/free-solid-svg-icons";
 
-export function Ppa({ selectedPpa, closeModal }) {
-  const [ppaData, setPpaData] = useState(null);
+export function Ppa({ selectedPpa, closeModal, onEdit }) {
+  const [currentPpa, setCurrentPpa] = useState(() => normalizePpaData(selectedPpa));
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await getPpa();
-        console.log("Ppa data:", data);
-        setPpaData(data);
-      } catch (error) {
-        console.log(error);
-      }
+  // Función para normalizar los datos del PPA
+  function normalizePpaData(ppa) {
+    if (!ppa) return {};
+    
+    return {
+      ...ppa,
+      suenos: ensureArray(ppa.suenos),
+      retos: ensureArray(ppa.retos),
+      fortalezas: ensureArray(ppa.fortalezas),
+      corporabilidad: ensureArray(ppa.corporabilidad),
+      creatividad: ensureArray(ppa.creatividad),
+      afectividad: ensureArray(ppa.afectividad),
+      espiritualidad: ensureArray(ppa.espiritualidad),
+      caracter: ensureArray(ppa.caracter),
+      sociabilidad: ensureArray(ppa.sociabilidad),
+      actividad: Array.isArray(ppa.actividad) ? ppa.actividad : []
     };
-
-    fetchData();
-  }, []);
-
-  if (!ppaData) {
-    return <div>Cargando...</div>;
   }
 
-  const filteredValues = Object.entries(ppaData).filter(
-    ([key]) =>
-      ![
-        "id",
-        "createdAt",
-        "createdBy",
-        "suenos",
-        "retos",
-        "fortalezas",
-        "afectividad",
-        "sociabilidad",
-        "corporabilidad",
-        "caracter",
-        "creatividad",
-        "espiritualidad",
-        "actividad",
-        "fecha",
-      ].includes(key)
-  );
+  // Función para asegurar que siempre trabajamos con arrays válidos
+  function ensureArray(data) {
+    if (!data) return [];
+    if (Array.isArray(data)) return data.filter(item => item != null && item !== '');
+    return [String(data)].filter(item => item !== '');
+  }
 
-  const orderedValues = [
-    ["Sueños", selectedPpa.suenos],
-    ["Retos", selectedPpa.retos],
-    ["Mis fortalezas", selectedPpa.fortalezas],
-    ["Afectividad", selectedPpa.afectividad],
-    ["Espiritualidad", selectedPpa.espiritualidad],
-    ["Corporabilidad", selectedPpa.corporabilidad],
-    ["Caracter", selectedPpa.caracter],
-    ["Sociabilidad", selectedPpa.sociabilidad],
-    ["Creatividad", selectedPpa.creatividad],
-    ...filteredValues,
-    selectedPpa.actividad
-      ? ["Actividad", selectedPpa.actividad.actividad]
-      : null,
-    selectedPpa.actividad ? ["Fecha", selectedPpa.actividad.fecha] : null,
-  ]
-    .filter(Boolean)
-    .sort((a, b) => {
-      if (a[0] === "Actividad") return 1;
-      if (b[0] === "Actividad") return -1;
-      return 0;
+  // Efecto para escuchar cambios en tiempo real
+  useEffect(() => {
+    console.log('Datos iniciales recibidos:', selectedPpa);
+    setCurrentPpa(normalizePpaData(selectedPpa));
+
+    const unsubscribe = onPpaUpdate(selectedPpa.id, (updatedPpa) => {
+      console.log("Datos actualizados:", updatedPpa);
+      setCurrentPpa(normalizePpaData(updatedPpa));
     });
 
+    return () => unsubscribe();
+  }, [selectedPpa.id]);
+
+  // Función para formatear fechas
+  const formatDateTime = (date) => {
+    if (!date) return "No especificada";
+    if (date instanceof Date) return date.toLocaleDateString();
+    if (date?.toDate instanceof Function) return date.toDate().toLocaleDateString();
+    return date;
+  };
+
+  // Función mejorada para renderizar items
+  const renderItems = (items, fieldName) => {
+    if (!items || items.length === 0 || (items.length === 1 && items[0] === "")) {
+      return <p className="text-gray-500">No hay {fieldName} registrados</p>;
+    }
+
+    return (
+      <ul className="space-y-1">
+        {items.filter(item => item !== "").map((item, i) => (
+          <li key={i} className="flex items-start">
+            <span className="text-sm font-semibold mr-2">{i + 1}.</span>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-scout"></div>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <div className="bg-gray-100 rounded-lg max-w-lg w-full mx-4 md:mx-auto text-gray-500">
-        <div className="bg-primary mx-auto w-full py-5 px-4 rounded-t-lg">
-          <h2 className="text-3xl text-white">PPA</h2>
+    <div className="bg-white rounded-lg shadow-lg overflow-hidden max-h-[90vh] overflow-y-auto">
+      {/* Encabezado */}
+      <div className="bg-scout text-white p-4 sticky top-0 z-10">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">Detalles del PPA</h2>
+          <button 
+            onClick={closeModal}
+            className="text-white hover:text-gray-200"
+            aria-label="Cerrar modal"
+          >
+            <FontAwesomeIcon icon={faTimes} size="lg" />
+          </button>
         </div>
-        <div className="grid grid-cols-3 gap-4 p-2">
-          <div className="p-2">
-            <h2 className="text-lg font-bold">Sueños</h2>
-            {Array.isArray(selectedPpa.suenos) ? (
-              <ul>
-                {selectedPpa.suenos.map((item, i) => (
-                  <li key={i}>
-                    <span className="text-sm font-semibold mr-2">{i + 1}</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>
-                <span className="text-sm font-semibold mr-2">1</span>
-                {selectedPpa.suenos}
-              </p>
-            )}
+      </div>
+
+      {/* Contenido principal con datos actualizados */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+        {/* Columna 1 */}
+        <div className="space-y-4">
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Sueños</h3>
+            {renderItems(currentPpa.suenos, "sueños")}
           </div>
-          <div className="p-2">
-            <h2 className="text-lg font-bold">Retos</h2>
-            {Array.isArray(selectedPpa.retos) ? (
-              <ul>
-                {selectedPpa.retos.map((item, i) => (
-                  <li key={i}>
-                    <span className="text-sm font-semibold mr-2">{i + 1}</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>
-                <span className="text-sm font-semibold mr-2">1</span>
-                {selectedPpa.retos}
-              </p>
-            )}
+          
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Retos</h3>
+            {renderItems(currentPpa.retos, "retos")}
           </div>
-          <div className="p-2">
-            <h2 className="text-lg font-bold">Mis fortalezas</h2>
-            {Array.isArray(selectedPpa.fortalezas) ? (
-              <ul>
-                {selectedPpa.fortalezas.map((item, i) => (
-                  <li key={i}>
-                    <span className="text-sm font-semibold mr-2">{i + 1}</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>
-                <span className="text-sm font-semibold mr-2">1</span>
-                {selectedPpa.fortalezas}
-              </p>
-            )}
-          </div>
-          <div className="p-2">
-            <h2 className="text-lg font-bold">Caracter</h2>
-            <p>{selectedPpa.caracter}</p>
-          </div>
-          <div className="p-2">
-            <h2 className="text-lg font-bold">Afectividad</h2>
-            <p>{selectedPpa.afectividad}</p>
-          </div>
-          <div className="p-2">
-            <h2 className="text-lg font-bold">Espiritualidad</h2>
-            {Array.isArray(selectedPpa.espiritualidad) ? (
-              <ul>
-                {selectedPpa.espiritualidad.map((item, i) => (
-                  <li key={i}>
-                    <span className="text-sm font-semibold mr-2">{i + 1}</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>
-                <span className="text-sm font-semibold mr-2">1</span>
-                {selectedPpa.espiritualidad}
-              </p>
-            )}
-          </div>
-          <div className="p-2">
-            <h2 className="text-lg font-bold">Creatividad</h2>
-            <p>{selectedPpa.creatividad}</p>
-          </div>
-          <div className="p-2">
-            <h2 className="text-lg font-bold">Sociabilidad</h2>
-            <p>{selectedPpa.sociabilidad}</p>
-          </div>
-          <div className="p-2">
-            <h2 className="text-lg font-bold">Corporabilidad</h2>
-            <p>{selectedPpa.corporabilidad}</p>
+          
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Fortalezas</h3>
+            {renderItems(currentPpa.fortalezas, "fortalezas")}
           </div>
         </div>
-        <div className="mt-6">
-          <hr className="my-4" />
-          <h2 className="text-lg font-bold ml-2">Actividades</h2>
-          {Array.isArray(selectedPpa.actividad) &&
-          selectedPpa.actividad.length > 0 ? (
-            <div className="p-2">
-              {selectedPpa.actividad.map((item, index) => (
-                <div key={index} className="flex">
-                  <div className="mr-4">
-                    <h2 className="text-lg font-bold mr-40">Actividad</h2>
-                    <p>{item.actividad}</p>
+        
+        {/* Columna 2 */}
+        <div className="space-y-4">
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Carácter</h3>
+            {renderItems(currentPpa.caracter, "carácter")}
+          </div>
+          
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Afectividad</h3>
+            {renderItems(currentPpa.afectividad, "afectividad")}
+          </div>
+          
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Creatividad</h3>
+            {renderItems(currentPpa.creatividad, "creatividad")}
+          </div>
+        </div>
+        
+        {/* Columna 3 */}
+        <div className="space-y-4">
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Sociabilidad</h3>
+            {renderItems(currentPpa.sociabilidad, "sociabilidad")}
+          </div>
+          
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Corporabilidad</h3>
+            {renderItems(currentPpa.corporabilidad, "corporabilidad")}
+          </div>
+          
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Espiritualidad</h3>
+            {renderItems(currentPpa.espiritualidad, "espiritualidad")}
+          </div>
+        </div>
+      </div>
+      
+      {/* Sección de Actividades */}
+      <div className="p-4 border-t border-gray-200">
+        <h3 className="text-lg font-semibold mb-3">Plan de Acción</h3>
+        {currentPpa.actividad?.length > 0 ? (
+          <div className="space-y-3">
+            {currentPpa.actividad.map((item, index) => (
+              <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium">Actividad</h4>
+                    <p>{item.actividad || "No especificada"}</p>
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold">Fecha</h2>
-                    <p>{item.fecha}</p>
+                    <h4 className="font-medium">Fecha</h4>
+                    <p>{formatDateTime(item.fecha)}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p>No hay actividad registrada</p>
-          )}
-        </div>
-        <div className="mt-6 flex justify-end">
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500">No hay actividades registradas</p>
+        )}
+      </div>
+      
+      {/* Pie de página con botones */}
+      <div className="flex justify-between p-4 border-t border-gray-200 bg-white sticky bottom-0">
+        <button
+          onClick={() => window.print()}
+          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors flex items-center"
+        >
+          <FontAwesomeIcon icon={faPrint} className="mr-2" />
+          Imprimir
+        </button>
+        <div className="flex space-x-2">
           <button
-            className="text-white bg-rover1-100 hover:bg-rover-100 focus:outline-none font-medium rounded-lg text-sm px-4 py-2 m-2 ml-2"
+            onClick={() => onEdit(currentPpa)}
+            className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors flex items-center"
+          >
+            <FontAwesomeIcon icon={faEdit} className="mr-2" />
+            Modificar
+          </button>
+          <button
             onClick={closeModal}
+            className="px-4 py-2 bg-gray-500 text-white hover:bg-gray-600 rounded-lg transition-colors"
           >
             Cerrar
           </button>

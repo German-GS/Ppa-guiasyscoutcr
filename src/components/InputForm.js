@@ -1,198 +1,97 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 
-export function InputForm({ onSavePpa }) {
-  const [inputs, setInputs] = useState([{ id: 1, value: "" }]);
-  const [saved, setSaved] = useState(false);
-
-  const handleInputChange = (index, event) => {
-    const value = event.target.value;
-    const updatedInputs = [...inputs];
-    updatedInputs[index].value = value;
-    setInputs(updatedInputs);
+export function InputForm({ 
+  initialValues = [], 
+  onSave, 
+  placeholder = "Ingrese un valor",
+  addButtonClass = "text-scout hover:text-scoutDark"
+}) {
+  // Función para normalizar valores iniciales
+  const normalizeInitialValues = (values) => {
+    if (!Array.isArray(values)) return [{ id: Date.now(), value: "" }];
+    if (values.length === 0) return [{ id: Date.now(), value: "" }];
+    return values.map((item, index) => ({
+      id: index,
+      value: String(item || "")
+    }));
   };
 
+  // Estado para los inputs
+  const [inputs, setInputs] = useState(() => normalizeInitialValues(initialValues));
+
+  // Efecto para actualizar cuando cambian los initialValues
+  useEffect(() => {
+    setInputs(normalizeInitialValues(initialValues));
+  }, [initialValues]);
+
+  // Manejar cambio en input
+  const handleInputChange = (id, value) => {
+    setInputs(prev => prev.map(input => 
+      input.id === id ? { ...input, value } : input
+    ));
+  };
+
+  // Agregar nuevo input
   const handleAddInput = () => {
-    const newId = inputs.length + 1;
-    setInputs([...inputs, { id: newId, value: "" }]);
+    setInputs(prev => [...prev, { id: Date.now(), value: "" }]);
   };
 
-  const handleRemoveInput = (index) => {
-    const updatedInputs = [...inputs];
-    updatedInputs.splice(index, 1);
-    setInputs(updatedInputs);
-  };
-
-  const handleSavePpa = async () => {
-    try {
-      const ppaData = inputs.map((input) => input.value);
-      await onSavePpa(ppaData);
-      console.log("Datos del PPA guardados exitosamente en la base de datos");
-      setSaved(true); // Cambia el estado a true si los datos se guardan correctamente
-    } catch (error) {
-      console.error(
-        "Error al guardar los datos del PPA en la base de datos",
-        error
-      );
-      // Manejar el error de manera adecuada, o mostrarlo en la interfaz de usuario si es posible
+  // Eliminar input
+  const handleRemoveInput = (id) => {
+    if (inputs.length > 1) {
+      setInputs(prev => prev.filter(input => input.id !== id));
     }
   };
 
+  // Guardar datos (con debounce)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const valuesToSave = inputs
+        .map(input => input.value.trim())
+        .filter(value => value !== "");
+      onSave(valuesToSave);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [inputs, onSave]);
+
   return (
-    <div>
-      {inputs.map((input, index) => (
-        <div key={input.id} className="flex mb-4">
+    <div className="space-y-3">
+      {inputs.map((input) => (
+        <div key={input.id} className="flex items-center gap-2">
           <input
             type="text"
             value={input.value}
-            onChange={(event) => handleInputChange(index, event)}
-            className="text-white border-none text-sm rounded-lg bg-gris block w-full p-2.5 dark:bg-gris dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 mb-4"
-            placeholder={`${index + 1}`}
+            onChange={(e) => handleInputChange(input.id, e.target.value)}
+            className="flex-1 text-gray-800 text-sm rounded-lg bg-gray-100 border border-gray-300 focus:ring-scout focus:border-scout block w-full p-2.5"
+            placeholder={placeholder}
+            aria-label={placeholder}
           />
+          
           {inputs.length > 1 && (
             <button
               type="button"
-              onClick={() => handleRemoveInput(index)}
-              className="bg-rover1 text-white rounded-md mx-1 px-4 py-2 hover:bg-rover-100 focus:outline-none focus:ring-2 focus:ring-rover-100"
+              onClick={() => handleRemoveInput(input.id)}
+              className="text-red-500 hover:text-red-700 focus:outline-none"
+              aria-label="Eliminar campo"
             >
-              X
+              <FontAwesomeIcon icon={faTrash} />
             </button>
           )}
         </div>
       ))}
+
       <button
         type="button"
         onClick={handleAddInput}
-        className="bg-scout text-white rounded-md px-3 py-2.5 hover:bg-scout-100 focus:outline-none"
+        className={`mt-2 flex items-center text-sm focus:outline-none px-3 py-1 rounded ${addButtonClass}`}
+        aria-label="Agregar otro campo"
       >
-        <FontAwesomeIcon icon={faPlus} />
-      </button>
-      <button
-        type="button"
-        onClick={handleSavePpa}
-        className={`bg-rover1 text-white rounded-md px-3 py-2.5 hover:bg-rover-100 focus:outline-none mx-1${
-          saved ? " bg-rover1" : ""
-        }`}
-      >
-        {saved ? (
-          <FontAwesomeIcon icon={faCheck} />
-        ) : (
-          "Guardar"
-        )}
+        <FontAwesomeIcon icon={faPlus} className="mr-1" />
+        Agregar otro
       </button>
     </div>
   );
 }
-
-
-
-
-
-//className="rtext-white border-none text-sm rounded-lg bg-gris block w-full p-2.5 dark:bg-gris dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 mb-4"
-
-/* 
-export function Home() {
-  const { loading } = useAuth();
-  const [suenos, setSuenos] = useState([{ id: 1, value: "" }]);
-  const [retos, setRetos] = useState([{ id: 1, value: "" }]);
-  const [fortalezas, setFortalezas] = useState([{ id: 1, value: "" }]);
-  const [corporabilidad, setCorporabilidad] = useState([{ id: 1, value: "" }]);
-  const [creatividad, setCreatividad] = useState([{ id: 1, value: "" }]);
-  const [afectividad, setAfectividad] = useState([{ id: 1, value: "" }]);
-  const [espiritualidad, setEspiritualidad] = useState([{ id: 1, value: "" }]);
-  const [caracter, setCaracter] = useState([{ id: 1, value: "" }]);
-  const [sociabilidad, setSociabilidad] = useState([{ id: 1, value: "" }]);
-  // Agrega los demás estados para los campos adicionales
-
-  const handleInputChange = (field, newInputs) => {
-    switch (field) {
-      case "suenos":
-        setSuenos(newInputs);
-        break;
-      case "retos":
-        setRetos(newInputs);
-        break;
-      case "fortalezas":
-        setFortalezas(newInputs);
-        break;
-      case "corporabilidad":
-        setCorporabilidad(newInputs);
-        break;
-      case "creatividad":
-        setCreatividad(newInputs);
-        break;
-      case "afectividad":
-        setAfectividad(newInputs);
-        break;
-      case "espiritualidad":
-        setEspiritualidad(newInputs);
-        break;
-      case "caracter":
-        setCaracter(newInputs);
-        break;
-      case "sociabilidad":
-        setSociabilidad(newInputs);
-        break;
-      // Agrega casos para los demás campos
-      default:
-        break;
-    }
-  };
-
-  const handleFormSubmit = (event) => {
-    event.preventDefault();
-
-    const data = {
-      suenos: suenos.map((input) => input.value),
-      retos: retos.map((input) => input.value),
-      fortalezas: fortalezas.map((input) => input.value),
-      corporabilidad: corporabilidad.map((input) => input.value),
-      creatividad: creatividad.map((input) => input.value),
-      afectividad: afectividad.map((input) => input.value),
-      espiritualidad: espiritualidad.map((input) => input.value),
-      caracter: caracter.map((input) => input.value),
-      sociabilidad: sociabilidad.map((input) => input.value),
-
-      // Agrega los demás campos con sus respectivos map
-    };
-
-    console.log("Inputs:", data);
-
-    // Verifica que los valores no sean una cadena vacía antes de llamar a savePpa()
-    const isFormValid = Object.values(data).every((field) => field.length > 0);
-
-    if (isFormValid) {
-      savePpa(
-        data.suenos,
-        data.retos,
-        data.fortalezas,
-        data.corporabilidad,
-        data.creatividad,
-        data.afectividad,
-        data.espiritualidad,
-        data.caracter,
-        data.sociabilidad
-
-        // Pasa los demás campos a la función savePpa
-      );
-      console.log("Datos enviados:", data);
-    } else {
-      console.log("Uno o más campos están vacíos");
-    }
-  };
-    const data = {
-      suenos: suenos.map((input) => input.value),
-      retos: retos.map((input) => input.value),
-      fortalezas: fortalezas.map((input) => input.value),
-      corporabilidad: corporabilidad.map((input) => input.value),
-      creatividad: creatividad.map((input) => input.value),
-      afectividad: afectividad.map((input) => input.value),
-      espiritualidad: espiritualidad.map((input) => input.value),
-      caracter: caracter.map((input) => input.value),
-      sociabilidad: sociabilidad.map((input) => input.value),
-  
-      // Agrega los demás campos con sus respectivos map
-    };
-  };
- */

@@ -1,72 +1,47 @@
 import React, { useState, useEffect } from "react";
-import { getPpa, deletePpa, onGetPpas } from "../firebase";
+import { onGetPpas, deletePpa } from "../firebase";
 import Swal from "sweetalert2";
 import Modal from "react-modal";
-import { setAppElement } from "react-modal";
-import { Ppa } from "./Ppa.js";
-import "./modal.css";
+import { Ppa } from "./Ppa";
+import { formatDateTime } from "../utils/dateUtils";
+import { useAuth } from "../context/authContext"; // ✅ Importar el usuario autenticado
 
-export function ListPpa() {
-  const [ppaData, setPpaData] = useState([]);
+export function ListPpa({ onEditPpa }) {
+  const { user } = useAuth(); // ✅ Obtener UID del usuario
   const [realtimePpaData, setRealtimePpaData] = useState([]);
   const [selectedPpa, setSelectedPpa] = useState(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    obtPpa(); // Obtén los PPA's iniciales
-
-    const handleRealtimePpaUpdate = (querySnapshot) => {
-      const updatedPpaData = [];
-      querySnapshot.forEach((doc) => {
-        updatedPpaData.push({ id: doc.id, ...doc.data() });
-      });
-      setRealtimePpaData(updatedPpaData);
-    };
-
-    const unsubscribe = onGetPpas(handleRealtimePpaUpdate);
-
-    return () => {
-      unsubscribe(); // Detén la suscripción cuando el componente se desmonte
-    };
-  }, []);
-
-  // Obtiene los PPa's de la base de datos
-  const obtPpa = async () => {
-    try {
-      const ppaData = await getPpa();
-      setPpaData(ppaData);
-    } catch (error) {
-      console.log(error);
-    }
+  const closeModal = () => {
+    setModalIsOpen(false);
+    setSelectedPpa(null);
   };
 
-  const formatDate = (date) => {
-    if (date instanceof Date) {
-      return date.toLocaleDateString();
-    } else if (date?.toDate instanceof Function) {
-      // Si es un objeto Timestamp, convertirlo a Date antes de formatear
-      const timestampDate = date.toDate();
-      return timestampDate.toLocaleDateString();
-    }
-    return "";
+  const handleEditPpa = (ppa) => {
+    closeModal();
+    onEditPpa(ppa);
   };
 
   const eliminarPpa = async (id) => {
     try {
-      await deletePpa(id);
-      setPpaData((prevData) => prevData.filter((ppa) => ppa.id !== id));
-      Swal.fire({
-        icon: "success",
-        title: "¡Eliminado!",
-        text: "El PPA se ha eliminado correctamente.",
+      const result = await Swal.fire({
+        title: '¿Estás seguro?',
+        text: "¡No podrás revertir esto!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, eliminar'
       });
+
+      if (result.isConfirmed) {
+        await deletePpa(id);
+        Swal.fire('¡Eliminado!', 'Tu PPA ha sido eliminado.', 'success');
+      }
     } catch (error) {
-      console.error("Error al eliminar el PPA de la base de datos", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error al eliminar el PPA",
-        text: "Ha ocurrido un error al eliminar el PPA. Por favor, intenta nuevamente.",
-      });
+      console.error("Error al eliminar:", error);
+      Swal.fire('Error', 'Ocurrió un problema al eliminar el PPA', 'error');
     }
   };
 
@@ -75,209 +50,118 @@ export function ListPpa() {
     setModalIsOpen(true);
   };
 
-  const closeModal = () => {
-    setModalIsOpen(false);
-  };
-  Modal.setAppElement("#root"); // Reemplaza '#root' por el selector del elemento raíz de tu aplicación
-  // ...
-
-  return (
-    <div>
-      <h1 className="text-3xl mb-5 mt-5 p-2">Lista de PPA's realizados</h1>
-      <table className="mx-auto w-full border-collapse">
-        <thead>
-          <tr>
-            <th className="px-4 py-2 text-center text-xl">PPA</th>
-            <th className="px-4 py-2 text-center text-xl">Fecha de Creación</th>
-            <th className="px-4 py-2 text-center text-xl">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {realtimePpaData.map((ppa, index) => (
-            <tr key={index}>
-              <td className="px-4 py-2 text-center">{`PPA ${index + 1}`}</td>
-              <td className="px-4 py-2 text-center">
-                {formatDate(ppa.createdAt)}
-              </td>
-              <td className="px-4 py-2 text-center">
-              <div className="flex items-center justify-center">
-                {realtimePpaData.length > 0 && (
-                  <button
-                    onClick={() => openModal(ppa)}
-                    className="text-white bg-scout hover:bg-scout-100 focus:outline-none font-medium rounded-lg text-sm px-4 py-2"
-                  >
-                    Ver
-                  </button>
-                )}
-                {ppa.id && (
-                  <button
-                    onClick={() => eliminarPpa(ppa.id)}
-                    className="text-white bg-rover1-100 hover:bg-rover-100 focus:outline-none font-medium rounded-lg text-sm px-4 py-2 ml-2"
-                  >
-                    Eliminar
-                  </button>
-                )}
-              </div>
-            </td>
-            
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <Modal
-        isOpen={modalIsOpen}
-        onRequestClose={closeModal}
-        contentLabel="PPA Details"
-        className="fixed inset-0 flex items-center justify-center"
-      >
-        {selectedPpa && (
-          <div className="bg-white rounded-lg max-w-lg w-full mx-4 md:mx-auto p-2 text-gray-500">
-            <Ppa selectedPpa={selectedPpa} closeModal={closeModal} />
-          </div>
-        )}
-      </Modal>
-    </div>
-  );
-}
-
-/**
- * import React, { useState, useEffect } from "react";
-import { getPpa, deletePpa, onGetPpas } from "../firebase";
-import Swal from "sweetalert2";
-import Modal from "react-modal";
-import { setAppElement } from "react-modal";
-import { Ppa } from "./Ppa.js";
-import "./modal.css";
-
-export function ListPpa() {
-  const [ppaData, setPpaData] = useState([]);
-  const [realtimePpaData, setRealtimePpaData] = useState([]);
-  const [selectedPpa, setSelectedPpa] = useState(null);
-  const [modalIsOpen, setModalIsOpen] = useState(false);
-
   useEffect(() => {
-    obtPpa(); // Obtén los PPA's iniciales
-
-    const handleRealtimePpaUpdate = (querySnapshot) => {
-      const updatedPpaData = [];
-      querySnapshot.forEach((doc) => {
-        updatedPpaData.push({ id: doc.id, ...doc.data() });
+    if (!user?.uid) {
+      console.log("Usuario no autenticado");
+      return;
+    }
+  
+    console.log(`Buscando PPAs para usuario: ${user.uid}`);
+    setLoading(true);
+  
+    const unsubscribe = onGetPpas(user.uid, (ppas) => {
+      console.log("PPAs recibidos:", ppas);
+      
+      if (!ppas || ppas.length === 0) {
+        console.log("No se encontraron PPAs para este usuario");
+      }
+  
+      const sortedData = ppas.sort((a, b) => {
+        const dateA = a.createdAt?.getTime() || 0;
+        const dateB = b.createdAt?.getTime() || 0;
+        return dateB - dateA;
       });
-      setRealtimePpaData(updatedPpaData);
-    };
-
-    const unsubscribe = onGetPpas(handleRealtimePpaUpdate);
-
+  
+      setRealtimePpaData(sortedData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error en listener:", error);
+      setLoading(false);
+    });
+  
     return () => {
-      unsubscribe(); // Detén la suscripción cuando el componente se desmonte
+      console.log("Limpiando suscripción");
+      unsubscribe?.();
     };
-  }, []);
+  }, [user?.uid]);
+  
 
-  // Obtiene los PPa's de la base de datos
-  const obtPpa = async () => {
-    try {
-      const ppaData = await getPpa();
-      setPpaData(ppaData);
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-scout"></div>
+      </div>
+    );
+  }
 
-  const formatDate = (date) => {
-    if (date instanceof Date) {
-      return date.toLocaleDateString();
-    } else if (date?.toDate instanceof Function) {
-      // Si es un objeto Timestamp, convertirlo a Date antes de formatear
-      const timestampDate = date.toDate();
-      return timestampDate.toLocaleDateString();
-    }
-    return "";
-  };
-
-  const eliminarPpa = async (id) => {
-    try {
-      await deletePpa(id);
-      setPpaData((prevData) => prevData.filter((ppa) => ppa.id !== id));
-      Swal.fire({
-        icon: "success",
-        title: "¡Eliminado!",
-        text: "El PPA se ha eliminado correctamente.",
-      });
-    } catch (error) {
-      console.error("Error al eliminar el PPA de la base de datos", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error al eliminar el PPA",
-        text: "Ha ocurrido un error al eliminar el PPA. Por favor, intenta nuevamente.",
-      });
-    }
-  };
-
-  const openModal = (ppa) => {
-    setSelectedPpa(ppa);
-    setModalIsOpen(true);
-  };
-
-  const closeModal = () => {
-    setModalIsOpen(false);
-  };
-  Modal.setAppElement("#root"); // Reemplaza '#root' por el selector del elemento raíz de tu aplicación
   return (
-    <div>
-      <h1 className="text-3xl mb-5 mt-5 p-2">Lista de PPA's realizados</h1>
-      <table className="mx-auto w-full border-collapse">
-        <thead>
-          <tr>
-            <th className="px-4 py-2 text-center text-xl">PPA</th>
-            <th className="px-4 py-2 text-center text-xl">Fecha de Creación</th>
-            <th className="px-4 py-2 text-center text-xl">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {realtimePpaData.map((ppa, index) => (
-            <tr key={index}>
-              <td className="px-4 py-2 text-center">{`PPA ${index + 1}`}</td>
-              <td className="px-4 py-2 text-center">
-                {formatDate(ppa.createdAt)}
-              </td>
-              <td className="px-4 py-2 text-center">
-                <div className="flex items-center justify-center">
-                  <button
-                    onClick={() => openModal(ppa)}
-                    className="text-white bg-scout hover:bg-scout-100 focus:outline-none font-medium rounded-lg text-sm px-4 py-2"
-                  >
-                    Ver
-                  </button>
-                  {ppa.id && (
-                    <button
-                      onClick={() => eliminarPpa(ppa.id)}
-                      className="text-white bg-rover1-100 hover:bg-rover-100 focus:outline-none font-medium rounded-lg text-sm px-4 py-2 ml-2"
-                    >
-                      Eliminar
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="px-4">
+      <h1 className="text-3xl mb-5 mt-5 p-2 text-center">Lista de PPA's realizados</h1>
+
+      {realtimePpaData.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No hay PPAs registrados aún</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="px-4 py-3 text-left text-lg font-semibold text-gray-700">#</th>
+                <th className="px-4 py-3 text-left text-lg font-semibold text-gray-700">Fecha y Hora de Creación</th>
+                <th className="px-4 py-3 text-left text-lg font-semibold text-gray-700">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {realtimePpaData.map((ppa, index) => (
+                <tr key={ppa.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">{index + 1}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {formatDateTime(ppa.createdAt)}
+                    {ppa.modifiedAt && (
+                      <div className="text-xs text-gray-500">
+                        Modificado: {formatDateTime(ppa.modifiedAt)}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => openModal(ppa)}
+                        className="btn-scout-red text-white px-4 py-2 rounded-lg hover:bg-[#FFA400] transition-colors"
+                      >
+                        Ver Detalles
+                      </button>
+                      <button
+                        onClick={() => eliminarPpa(ppa.id)}
+                        className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <Modal
         isOpen={modalIsOpen}
         onRequestClose={closeModal}
-        contentLabel="PPA Details"
-        className="fixed inset-0 flex items-center justify-center"
+        contentLabel="Detalles del PPA"
+        className="fixed inset-0 flex items-center justify-center p-4"
+        overlayClassName="fixed inset-0 bg-black bg-opacity-50"
       >
         {selectedPpa && (
-          <div className="bg-white rounded-lg max-w-lg w-full mx-4 md:mx-auto p-2 text-gray-500">
-            <Ppa selectedPpa={selectedPpa} closeModal={closeModal} />
-          </div>
+          <Ppa
+            selectedPpa={selectedPpa}
+            closeModal={closeModal}
+            onEdit={handleEditPpa}
+          />
         )}
       </Modal>
     </div>
   );
 }
-
- */
