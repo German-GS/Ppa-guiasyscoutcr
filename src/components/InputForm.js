@@ -1,61 +1,57 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 
-export function InputForm({ 
+export const InputForm = forwardRef(({ 
   initialValues = [], 
-  onSave, 
   placeholder = "Ingrese un valor",
-  addButtonClass = "text-scout hover:text-scoutDark"
-}) {
-  // Función para normalizar valores iniciales
+  addButtonClass = "btn-scout-red text-white"
+}, ref) => {
   const normalizeInitialValues = (values) => {
-    if (!Array.isArray(values)) return [{ id: Date.now(), value: "" }];
-    if (values.length === 0) return [{ id: Date.now(), value: "" }];
+    if (!Array.isArray(values) || values.length === 0) {
+      return [{ id: Date.now(), value: "" }];
+    }
     return values.map((item, index) => ({
       id: index,
       value: String(item || "")
     }));
   };
 
-  // Estado para los inputs
   const [inputs, setInputs] = useState(() => normalizeInitialValues(initialValues));
+  const [initialLoad, setInitialLoad] = useState(true);
 
-  // Efecto para actualizar cuando cambian los initialValues
   useEffect(() => {
-    setInputs(normalizeInitialValues(initialValues));
-  }, [initialValues]);
+    if (initialLoad) {
+      setInputs(normalizeInitialValues(initialValues));
+      setInitialLoad(false);
+    }
+  }, [initialValues, initialLoad]);
 
-  // Manejar cambio en input
+  useImperativeHandle(ref, () => ({
+    getValues: () =>
+      inputs
+        .map(input => input.value.trim())
+        .filter(value => value !== ""),
+    setInputs: (newValues) => {
+      setInputs(Array.isArray(newValues) ? normalizeInitialValues(newValues.map(v => v.value || v)) : [{ id: Date.now(), value: "" }]);
+    }
+  }));
+
   const handleInputChange = (id, value) => {
     setInputs(prev => prev.map(input => 
       input.id === id ? { ...input, value } : input
     ));
   };
 
-  // Agregar nuevo input
   const handleAddInput = () => {
     setInputs(prev => [...prev, { id: Date.now(), value: "" }]);
   };
 
-  // Eliminar input
   const handleRemoveInput = (id) => {
     if (inputs.length > 1) {
       setInputs(prev => prev.filter(input => input.id !== id));
     }
   };
-
-  // Guardar datos (con debounce)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const valuesToSave = inputs
-        .map(input => input.value.trim())
-        .filter(value => value !== "");
-      onSave(valuesToSave);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [inputs, onSave]);
 
   return (
     <div className="space-y-3">
@@ -69,7 +65,6 @@ export function InputForm({
             placeholder={placeholder}
             aria-label={placeholder}
           />
-          
           {inputs.length > 1 && (
             <button
               type="button"
@@ -86,7 +81,7 @@ export function InputForm({
       <button
         type="button"
         onClick={handleAddInput}
-        className={`mt-2 flex items-center text-sm focus:outline-none px-3 py-1 rounded ${addButtonClass}`}
+        className={`mt-2 flex items-center text-sm focus:outline-none px-3 py-2 rounded ${addButtonClass}`}
         aria-label="Agregar otro campo"
       >
         <FontAwesomeIcon icon={faPlus} className="mr-1" />
@@ -94,4 +89,4 @@ export function InputForm({
       </button>
     </div>
   );
-}
+});

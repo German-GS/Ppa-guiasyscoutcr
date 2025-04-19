@@ -1,107 +1,92 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrash, faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
 
-export function Agendar({ onSave, initialData = [] }) {
-  const [activities, setActivities] = useState(() => {
-    // Mejor manejo de datos iniciales
-    if (initialData && initialData.length > 0) {
-      return initialData.map((item, index) => ({
-        id: Date.now() + index,
-        actividad: item.actividad || "",
-        fecha: item.fecha || "",
-        addedToCalendar: false
-      }));
-    }
-    return [{ id: Date.now(), actividad: "", fecha: "", addedToCalendar: false }];
-  });
+export const Agendar = forwardRef(({ initialData = [] }, ref) => {
+  const [activities, setActivities] = useState([]);
+  const [initialLoad, setInitialLoad] = useState(true);
 
-  // Formatear fecha para Google Calendar
-  const formatDateForGoogleCalendar = (dateString) => {
-    if (!dateString) return "";
-    try {
-      const date = new Date(dateString);
-      return date.toISOString().replace(/-|:|\.\d{3}/g, "");
-    } catch (error) {
-      console.error("Error formateando fecha:", error);
-      return "";
-    }
-  };
-
-  // Abrir Google Calendar con los datos de la actividad
-  const addToGoogleCalendar = (actividad, fecha) => {
-    if (!actividad || !fecha) return;
-
-    try {
-      const startDate = new Date(fecha);
-      const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // +1 hora
-
-      const params = new URLSearchParams({
-        action: "TEMPLATE",
-        text: `PPA: ${actividad}`,
-        dates: `${formatDateForGoogleCalendar(startDate)}/${formatDateForGoogleCalendar(endDate)}`,
-        details: "Actividad creada desde la app PPA de Scouts",
-        sf: true,
-        output: "xml"
-      });
-
-      window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, '_blank');
-      
-      // Marcar como añadido al calendario
-      setActivities(prevActivities =>
-        prevActivities.map(activity =>
-          activity.actividad === actividad && activity.fecha === fecha 
-            ? { ...activity, addedToCalendar: true }
-            : activity
-        )
-      );
-    } catch (error) {
-      console.error("Error al agregar a Google Calendar:", error);
-    }
-  };
-
-  // Notificar al componente padre cuando cambien las actividades
   useEffect(() => {
-    const actividadesFiltradas = activities
-      .filter(activity => activity.actividad.trim() !== "" || activity.fecha.trim() !== "")
-      .map(activity => ({
-        actividad: activity.actividad,
-        fecha: activity.fecha
-      }));
-    
-    onSave(actividadesFiltradas);
-  }, [activities, onSave]);
+    if (initialLoad) {
+      if (initialData && initialData.length > 0) {
+        setActivities(initialData.map((item, index) => ({
+          id: Date.now() + index,
+          actividad: item.actividad || "",
+          fecha: item.fecha || "",
+          addedToCalendar: false
+        })));
+      } else {
+        setActivities([{ id: Date.now(), actividad: "", fecha: "", addedToCalendar: false }]);
+      }
+      setInitialLoad(false);
+    }
+  }, [initialData, initialLoad]);
+
+  useImperativeHandle(ref, () => ({
+    getValues: () =>
+      activities
+        .filter(a => a.actividad.trim() || a.fecha.trim())
+        .map(a => ({ actividad: a.actividad, fecha: a.fecha })),
+    setValues: (newData) => {
+      setActivities(
+        Array.isArray(newData) ? newData.map((item, i) => ({
+          id: Date.now() + i,
+          actividad: item.actividad || "",
+          fecha: item.fecha || "",
+          addedToCalendar: false
+        })) : []
+      );
+    }
+  }));
 
   const handleInputChange = (id, event) => {
     const { name, value } = event.target;
-    setActivities(prevActivities =>
-      prevActivities.map(activity =>
-        activity.id === id 
-          ? { 
-              ...activity, 
-              [name]: value, 
-              addedToCalendar: false 
-            } 
-          : activity
-      )
-    );
+    setActivities(prev => prev.map(activity =>
+      activity.id === id ? { ...activity, [name]: value, addedToCalendar: false } : activity
+    ));
   };
 
   const handleAddActivity = () => {
-    setActivities([...activities, { 
-      id: Date.now(), 
-      actividad: "", 
-      fecha: "", 
-      addedToCalendar: false 
+    setActivities([...activities, {
+      id: Date.now(),
+      actividad: "",
+      fecha: "",
+      addedToCalendar: false
     }]);
   };
 
   const handleRemoveActivity = (id) => {
     if (activities.length > 1) {
-      setActivities(prevActivities => 
-        prevActivities.filter(activity => activity.id !== id)
-      );
+      setActivities(prev => prev.filter(activity => activity.id !== id));
     }
+  };
+
+  const addToGoogleCalendar = (actividad, fecha) => {
+    if (!actividad || !fecha) return;
+
+    const startDate = new Date(fecha);
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+
+    const format = (date) => date.toISOString().replace(/-|:|\.\d{3}/g, "");
+
+    const params = new URLSearchParams({
+      action: "TEMPLATE",
+      text: `PPA: ${actividad}`,
+      dates: `${format(startDate)}/${format(endDate)}`,
+      details: "Actividad creada desde la app PPA de Scouts",
+      sf: true,
+      output: "xml"
+    });
+
+    window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, '_blank');
+
+    setActivities(prev =>
+      prev.map(a =>
+        a.actividad === actividad && a.fecha === fecha
+          ? { ...a, addedToCalendar: true }
+          : a
+      )
+    );
   };
 
   return (
@@ -147,8 +132,8 @@ export function Agendar({ onSave, initialData = [] }) {
                 type="button"
                 onClick={() => addToGoogleCalendar(activity.actividad, activity.fecha)}
                 className={`p-2 rounded-full focus:outline-none ${
-                  activity.addedToCalendar 
-                    ? "text-green-500 hover:text-green-700 bg-green-50" 
+                  activity.addedToCalendar
+                    ? "text-green-500 hover:text-green-700 bg-green-50"
                     : "text-blue-500 hover:text-blue-700 bg-blue-50"
                 }`}
                 title="Añadir a Google Calendar"
@@ -182,4 +167,4 @@ export function Agendar({ onSave, initialData = [] }) {
       </button>
     </div>
   );
-}
+});

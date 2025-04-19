@@ -54,6 +54,8 @@ const normalizePpaData = (ppaData) => {
 
 // Guardar un nuevo PPA
 export const savePpa = async (ppaData) => {
+  console.log("Datos que se van a guardar:", ppaData);
+
   try {
     const currentUser = auth.currentUser;
     if (!currentUser) {
