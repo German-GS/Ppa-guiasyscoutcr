@@ -9,6 +9,8 @@ import { savePpa, updatePpa, onPpaUpdate } from "../firebase";
 import { Agendar } from "./Agendar";
 import Swal from "sweetalert2";
 import "../App.css";
+import comunidadIcon from "../img/COMUNIDAD-ICONO-1.png";
+
 
 export function Home() {
   const { loading, user } = useAuth();
@@ -129,26 +131,29 @@ export function Home() {
     <div className="bg-white text-gray-800 w-full lg:mb-0 mb-4">
       <Navbar />
       <div className="max-w-screen-lg mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-5 mt-5 text-scout">
-          {isEditing ? "Modificar PPA" : "Mi PPA"}
-        </h1>
+        <div className="flex items-center justify-between mb-6 mt-5">
+          <h1 className="text-3xl font-bold text-scout">
+            {isEditing ? "Modificar PPA" : "Mi PPA"}
+          </h1>
+          <img src={comunidadIcon} alt="Comunidad" className="w-12 h-12 ml-4" />
+        </div>
 
-        <form id="ppa-form" onSubmit={handleSavePpa} className="space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mobile-stack">
+        <form id="ppa-form" onSubmit={handleSavePpa} className="space-y-12 bg-white shadow-md rounded-xl p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {Object.entries(refs).filter(([key]) => key !== "actividad").map(([key, ref]) => (
-              <div key={key} className="bg-gray-50 p-4 rounded-lg mobile-input-wrapper">
-                <h2 className="text-xl font-semibold mb-2 text-gray-700">{fieldTitles[key]}</h2>
+              <div key={key} className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h2 className="text-lg font-bold text-scout mb-3 border-b border-gray-300 pb-2">{fieldTitles[key]}</h2>
                 <InputForm ref={ref} placeholder={fieldPlaceholders[key]} />
               </div>
             ))}
           </div>
 
-          <div className="mt-8 bg-gray-50 p-4 rounded-lg">
-            <h2 className="text-2xl font-semibold mb-4 text-gray-700">Mi Plan de Acción</h2>
+          <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h2 className="text-2xl font-bold text-scout mb-4">Mi Plan de Acción</h2>
             <Agendar ref={refs.actividad} initialData={[]} />
           </div>
 
-          <div className="flex justify-center mt-10">
+          <div className="flex flex-col md:flex-row justify-center items-center gap-4 mt-8">
             <button
               ref={registerButtonRef}
               type="submit"
@@ -156,7 +161,7 @@ export function Home() {
               className="px-8 py-3 bg-scout text-white font-medium rounded-lg transition-colors disabled:opacity-50 shadow-md hover:bg-[#FFA400] hover:shadow-lg"
             >
               {isSubmitting ? (
-                <><span className="inline-block animate-spin mr-2">↻</span>{isEditing ? "Actualizando..." : "Registrando..."}</>
+                <><span className="inline-block animate-spin mr-2">↻</span>{isEditing ? "Actualizar..." : "Registrando..."}</>
               ) : isEditing ? "Actualizar PPA" : "Registrar PPA"}
             </button>
             {isEditing && (
@@ -170,7 +175,7 @@ export function Home() {
                     if (ref.current?.setValues) ref.current.setValues([]);
                   });
                 }}
-                className="ml-4 px-8 py-3 bg-gray-500 text-white font-medium rounded-lg transition-colors hover:bg-gray-600"
+                className="px-8 py-3 bg-gray-500 text-white font-medium rounded-lg transition-colors hover:bg-gray-600"
               >
                 Cancelar Edición
               </button>
@@ -180,19 +185,19 @@ export function Home() {
 
         <div id="ppa-list" className="mt-16">
           <hr className="mb-6 border-gray-200" />
-          <h2 className="text-2xl font-bold mb-4 text-scout">Mis Progresos</h2>
+          <h2 className="text-2xl font-bold mb-4 text-scout text-center">Mis Progresos</h2>
           <ListPpa onEditPpa={loadPpaForEditing} />
         </div>
       </div>
-      <footer className="bg-scout text-white text-center py-4 mt-10">
-      <div className="container mx-auto px-4">
-        <p className="text-sm">
-          Herramienta Digital de PPA    ·     Desarrollado por German García Siles     ·    &copy; 2025 v2.0
-        </p>
-      </div>
-    </footer>
 
+      <footer className="bg-scout text-white text-center py-4 mt-10">
+        <div className="container mx-auto px-4">
+          <p className="text-sm">
+            Herramienta Digital de PPA    ·     Desarrollado por German García Siles     ·    &copy; 2025 v2.0
+          </p>
+        </div>
+      </footer>
     </div>
-    
   );
 }
+

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { onPpaUpdate } from "../firebase";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEdit, faPrint, faTimes } from "@fortawesome/free-solid-svg-icons";
+import comunidadIcon from "../img/COMUNIDAD-ICONO-1.png";
 
 export function Ppa({ selectedPpa, closeModal, onEdit }) {
   const [currentPpa, setCurrentPpa] = useState(() => normalizePpaData(selectedPpa));
@@ -71,13 +72,14 @@ export function Ppa({ selectedPpa, closeModal, onEdit }) {
 
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden max-h-[90vh] overflow-y-auto">
-      <div className="bg-scout text-white p-4 sticky top-0 z-10">
-        <div className="flex justify-between items-center">
+      <div className="bg-scout text-white px-4 py-3 flex justify-between items-center sticky top-0 z-10">
+        <div className="flex items-center gap-4">
           <h2 className="text-2xl font-bold">Detalles del PPA</h2>
-          <button onClick={closeModal} className="text-white hover:text-gray-200" aria-label="Cerrar modal">
-            <FontAwesomeIcon icon={faTimes} size="lg" />
-          </button>
+          <img src={comunidadIcon} alt="Comunidad" className="w-10 h-10" />
         </div>
+        <button onClick={closeModal} className="text-white hover:text-gray-200" aria-label="Cerrar modal">
+          <FontAwesomeIcon icon={faTimes} size="lg" />
+        </button>
       </div>
 
       <div className="text-sm text-gray-600 px-4 pt-2">
@@ -85,59 +87,57 @@ export function Ppa({ selectedPpa, closeModal, onEdit }) {
         {currentPpa.modifiedAt && <p>Modificado: {formatDateTime(currentPpa.modifiedAt)}</p>}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 mobile-stack">
-        <div className="space-y-4 mobile-input-wrapper">
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Sueños</h3>
-            {renderItems(currentPpa.suenos, "sueños")}
-          </div>
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Retos</h3>
-            {renderItems(currentPpa.retos, "retos")}
-          </div>
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Fortalezas</h3>
-            {renderItems(currentPpa.fortalezas, "fortalezas")}
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold mb-2 text-scout">Sueños</h3>
+          {renderItems(currentPpa.suenos, "sueños")}
         </div>
-
-        <div className="space-y-4 mobile-input-wrapper">
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Carácter</h3>
-            {renderItems(currentPpa.caracter, "carácter")}
-          </div>
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Afectividad</h3>
-            {renderItems(currentPpa.afectividad, "afectividad")}
-          </div>
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Creatividad</h3>
-            {renderItems(currentPpa.creatividad, "creatividad")}
-          </div>
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold mb-2 text-scout">Retos</h3>
+          {renderItems(currentPpa.retos, "retos")}
         </div>
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold mb-2 text-scout">Fortalezas</h3>
+          {renderItems(currentPpa.fortalezas, "fortalezas")}
+        </div>
+      </div>
 
-        <div className="space-y-4 mobile-input-wrapper">
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Sociabilidad</h3>
-            {renderItems(currentPpa.sociabilidad, "sociabilidad")}
-          </div>
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Corporabilidad</h3>
-            {renderItems(currentPpa.corporabilidad, "corporabilidad")}
-          </div>
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Espiritualidad</h3>
-            {renderItems(currentPpa.espiritualidad, "espiritualidad")}
-          </div>
+      <hr className="border-t border-gray-300 my-4 mx-4" />
+      <h3 className="text-xl font-bold text-scout px-4 mb-2">Áreas de Crecimiento</h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4 pb-4">
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold mb-2 text-scout">Carácter</h3>
+          {renderItems(currentPpa.caracter, "carácter")}
+        </div>
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold mb-2 text-scout">Afectividad</h3>
+          {renderItems(currentPpa.afectividad, "afectividad")}
+        </div>
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold mb-2 text-scout">Creatividad</h3>
+          {renderItems(currentPpa.creatividad, "creatividad")}
+        </div>
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold mb-2 text-scout">Sociabilidad</h3>
+          {renderItems(currentPpa.sociabilidad, "sociabilidad")}
+        </div>
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold mb-2 text-scout">Corporabilidad</h3>
+          {renderItems(currentPpa.corporabilidad, "corporabilidad")}
+        </div>
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold mb-2 text-scout">Espiritualidad</h3>
+          {renderItems(currentPpa.espiritualidad, "espiritualidad")}
         </div>
       </div>
 
       <div className="p-4 border-t border-gray-200">
-        <h3 className="text-lg font-semibold mb-3">Plan de Acción</h3>
+        <h3 className="text-xl font-bold text-scout mb-3">Plan de Acción</h3>
         {currentPpa.actividad?.length > 0 ? (
           <div className="space-y-3">
             {currentPpa.actividad.map((item, index) => (
-              <div key={index} className="bg-gray-50 p-3 rounded-lg">
+              <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-medium">Actividad</h4>
@@ -183,4 +183,3 @@ export function Ppa({ selectedPpa, closeModal, onEdit }) {
     </div>
   );
 }
-
