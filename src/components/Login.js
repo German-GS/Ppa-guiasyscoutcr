@@ -64,12 +64,36 @@ export function Login() {
     setError("");
     try {
       const cred = await loginWithGoogle();
-      await redirigirPorRol(cred.user.uid);
+      const { displayName, email, uid } = cred.user;
+  
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+  
+      if (!userSnap.exists()) {
+        // Separar nombre y apellido si es posible
+        const [nombre, ...apellidoParts] = displayName.split(" ");
+        const apellido = apellidoParts.join(" ");
+        // Guardar en localStorage
+        localStorage.setItem("nombre", nombre);
+        localStorage.setItem("apellido", apellido);
+        localStorage.setItem("email", email);
+        navigate("/completar-perfil");
+      } else {
+        const userData = userSnap.data();
+        if (!userData.rol) {
+          navigate("/completar-perfil");
+        } else if (userData.rol === "consejero") {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
+      }
     } catch (error) {
       console.log(error.message);
       setError("Error al iniciar con Google");
     }
   };
+  
 
   return (
     <div className="w-full max-w-xs m-auto">

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-export function LoginRedirectHandler() {
+export function FlujoLogin() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -12,7 +12,7 @@ export function LoginRedirectHandler() {
     const checkUserData = async () => {
       if (!user?.uid) return;
 
-      const userDocRef = doc(db, "usuarios", user.uid);
+      const userDocRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userDocRef);
 
       if (!userSnap.exists()) {

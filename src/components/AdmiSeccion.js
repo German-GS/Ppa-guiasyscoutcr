@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Sidebar from "./Sidebar";
+import comunidadIcon from "../img/COMUNIDAD-ICONO-1.png"; // Asegúrate de que esta ruta sea correcta
 
 export function AdminSeccion() {
   const [currentView, setCurrentView] = useState("agregar");
@@ -25,7 +26,10 @@ export function AdminSeccion() {
     <div className="flex h-screen">
       <Sidebar onNavigate={setCurrentView} />
       <main className="flex-1 bg-gray-50 p-8 overflow-y-auto">
-        <h1 className="text-2xl font-bold text-scout mb-6">Administración</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-scout">Administración de la Sección</h1>
+          <img src={comunidadIcon} alt="Comunidad" className="w-12 h-12" />
+        </div>
         {renderSection()}
       </main>
     </div>
