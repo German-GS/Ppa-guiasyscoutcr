@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import {
   getFirestore,
   collection,
@@ -13,7 +13,8 @@ import {
   deleteDoc,
   doc,
   updateDoc,
-  orderBy
+  orderBy,
+  setDoc
 } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
 
@@ -78,6 +79,20 @@ export const savePpa = async (ppaData) => {
   }
 };
 
+// Guardar usuario con perfil
+export const registerUserWithProfile = async (email, password, profileData) => {
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  const user = userCredential.user;
+
+  await setDoc(doc(db, "usuarios", user.uid), {
+    uid: user.uid,
+    email: user.email,
+    ...profileData,
+    createdAt: serverTimestamp()
+  });
+
+  return user;
+};
 
 // Actualizar un PPA existente
 export const updatePpa = async (ppaId, ppaData) => {
@@ -165,9 +180,8 @@ export const getPpa = async () => {
 // Escuchar en tiempo real todos los PPAs del usuario actual
 export const onGetPpas = (uid, successCallback, errorCallback) => {
   try {
-    // Asegúrate que el nombre de colección coincida exactamente con tu Firestore
     const q = query(
-      collection(db, "PPA"), // o "ppas" según tu colección real
+      collection(db, "PPA"),
       where("userId", "==", uid),
       orderBy("createdAt", "desc")
     );
@@ -210,6 +224,7 @@ export {
   db,
   analytics
 };
+
 
 
 
