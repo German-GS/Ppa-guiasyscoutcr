@@ -4,6 +4,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { Alert } from "./Alert.js";
 import { ImagGuiasyScout } from "./ImgGuiasyScout.js";
 import comunidadIcon from "../img/COMUNIDAD-ICONO-1.png";
+import { setDoc, doc } from "firebase/firestore";
+import { db } from "../firebase";
 
 export function Register() {
   const [user, setUser] = useState({
@@ -31,25 +33,42 @@ export function Register() {
     e.preventDefault();
     setError("");
     setLoading(true);
+  
     try {
-      await signup(user.email, user.password, user);
-      navigate("/");
+      // 1. Crear usuario con correo y contraseña
+      const cred = await signup(user.email, user.password);
+      
+      // 2. Guardar datos adicionales en Firestore
+      await setDoc(doc(db, "users", cred.user.uid), {
+        nombre: user.nombre,
+        apellido: user.apellido,
+        edad: user.edad,
+        grupo: user.grupo,
+        provincia: user.provincia,
+        canton: user.canton,
+        distrito: user.distrito,
+        rol: user.rol,
+        email: user.email
+      });
+  
+      // 3. Mostrar mensaje (opcional)
+      alert("Registro exitoso. Ahora puedes iniciar sesión.");
+  
+      // 4. Redireccionar
+      navigate("/login");
+  
     } catch (error) {
-      if (error.code === "auth/missing-password") {
-        setError("Falta ingresar la contraseña");
-      } else if (error.code === "auth/weak-password") {
-        setError("La contraseña debe de contener al menos 6 caracteres");
-      } else if (error.code === "auth/email-already-in-use") {
-        setError("El correo electrónico ya está registrado en el sistema");
-      } else if (error.code === "auth/internal-error") {
-        setError("Correo inválido");
+      console.error(error);
+      if (error.code === "auth/email-already-in-use") {
+        setError("El correo electrónico ya está registrado.");
       } else {
-        setError("Error al registrar el usuario");
+        setError("Error al registrar el usuario.");
       }
     } finally {
       setLoading(false);
     }
   };
+  
 
   return (
     <div className="w-full max-w-2xl m-auto">

@@ -1,41 +1,43 @@
+// src/components/FlujoLogin.js
 import { useEffect } from "react";
 import { useAuth } from "../context/authContext";
 import { useNavigate } from "react-router-dom";
-import { db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 export function FlujoLogin() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkUserData = async () => {
-      if (!user?.uid) return;
-
-      const userDocRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userDocRef);
-
-      if (!userSnap.exists()) {
-        // Usuario sin datos adicionales
-        navigate("/completar-datos");
+    const redirigir = async () => {
+      if (loading) return; // Espera que se resuelva el estado de autenticación
+      if (!user) {
+        navigate("/login");
         return;
       }
 
-      const userData = userSnap.data();
+      const perfilRef = doc(db, "users", user.uid);
+      const perfilSnap = await getDoc(perfilRef);
 
-      // Redirigir según rol
-      if (userData.rol === "consejero") {
+      if (!perfilSnap.exists()) {
+        navigate("/completar-perfil");
+        return;
+      }
+
+      const data = perfilSnap.data();
+      if (data.rol === "Protagonista") {
+        navigate("/home");
+      } else if (data.rol === "Consejero") {
         navigate("/admin");
-      } else if (userData.rol === "protagonista") {
-        navigate("/");
       } else {
-        // Si no tiene rol definido, pedir completar datos
-        navigate("/completar-datos");
+        navigate("/completar-perfil");
       }
     };
 
-    checkUserData();
-  }, [user, navigate]);
+    redirigir();
+  }, [user, loading, navigate]);
 
-  return null;
+  return null; // No renderiza nada, solo redirige
 }
+
