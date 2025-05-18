@@ -18,9 +18,10 @@ export function Register() {
     provincia: "",
     canton: "",
     distrito: "",
-    rol: "Protagonista"
+    rol: "Protagonista",
   });
-  const [error, setError] = useState();
+
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
@@ -33,13 +34,15 @@ export function Register() {
     e.preventDefault();
     setError("");
     setLoading(true);
-  
+
     try {
-      // 1. Crear usuario con correo y contraseña
       const cred = await signup(user.email, user.password);
-      
-      // 2. Guardar datos adicionales en Firestore
-      await setDoc(doc(db, "users", cred.user.uid), {
+
+      if (!cred.user || !cred.user.uid) {
+        throw new Error("No se pudo crear el usuario.");
+      }
+
+      const perfil = {
         nombre: user.nombre,
         apellido: user.apellido,
         edad: user.edad,
@@ -48,15 +51,15 @@ export function Register() {
         canton: user.canton,
         distrito: user.distrito,
         rol: user.rol,
-        email: user.email
-      });
-  
-      // 3. Mostrar mensaje (opcional)
+        email: user.email,
+      };
+
+      await setDoc(doc(db, "users", cred.user.uid), perfil);
+      console.log("Perfil guardado en Firestore:", cred.user.uid);
+
       alert("Registro exitoso. Ahora puedes iniciar sesión.");
-  
-      // 4. Redireccionar
       navigate("/login");
-  
+
     } catch (error) {
       console.error(error);
       if (error.code === "auth/email-already-in-use") {
@@ -68,7 +71,6 @@ export function Register() {
       setLoading(false);
     }
   };
-  
 
   return (
     <div className="w-full max-w-2xl m-auto">
@@ -78,6 +80,7 @@ export function Register() {
           <h2 className="text-xl font-bold text-gray-600">Registro</h2>
           <img src={comunidadIcon} alt="Icono Comunidad" className="w-10 h-10" />
         </div>
+
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
@@ -87,6 +90,7 @@ export function Register() {
                 name="nombre"
                 className="text-gray-600 border-none text-sm rounded-lg bg-gray-300 block w-full p-2.5"
                 onChange={handleChange}
+                required
               />
             </div>
             <div>
@@ -96,6 +100,7 @@ export function Register() {
                 name="apellido"
                 className="text-gray-600 border-none text-sm rounded-lg bg-gray-300 block w-full p-2.5"
                 onChange={handleChange}
+                required
               />
             </div>
             <div>
@@ -105,6 +110,7 @@ export function Register() {
                 name="edad"
                 className="text-gray-600 border-none text-sm rounded-lg bg-gray-300 block w-full p-2.5"
                 onChange={handleChange}
+                required
               />
             </div>
             <div>
@@ -114,10 +120,13 @@ export function Register() {
                 name="grupo"
                 className="text-gray-600 border-none text-sm rounded-lg bg-gray-300 block w-full p-2.5"
                 onChange={handleChange}
+                required
               />
             </div>
           </div>
+
           <hr className="my-4" />
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block text-gray-500 text-sm font-bold mb-1">Provincia</label>
@@ -126,6 +135,7 @@ export function Register() {
                 name="provincia"
                 className="text-gray-600 border-none text-sm rounded-lg bg-gray-300 block w-full p-2.5"
                 onChange={handleChange}
+                required
               />
             </div>
             <div>
@@ -135,6 +145,7 @@ export function Register() {
                 name="canton"
                 className="text-gray-600 border-none text-sm rounded-lg bg-gray-300 block w-full p-2.5"
                 onChange={handleChange}
+                required
               />
             </div>
             <div>
@@ -144,9 +155,11 @@ export function Register() {
                 name="distrito"
                 className="text-gray-600 border-none text-sm rounded-lg bg-gray-300 block w-full p-2.5"
                 onChange={handleChange}
+                required
               />
             </div>
           </div>
+
           <div className="mb-4">
             <label className="block text-gray-500 text-sm font-bold mb-1">Correo Electrónico</label>
             <input
@@ -155,8 +168,10 @@ export function Register() {
               placeholder="guiayscout@email.com"
               className="text-gray-600 border-none text-sm rounded-lg bg-gray-300 block w-full p-2.5"
               onChange={handleChange}
+              required
             />
           </div>
+
           <div className="mb-4">
             <label className="block text-gray-500 text-sm font-bold mb-1">Contraseña</label>
             <input
@@ -165,8 +180,10 @@ export function Register() {
               placeholder="******"
               className="text-gray-600 border-none text-sm rounded-lg bg-gray-300 block w-full p-2.5"
               onChange={handleChange}
+              required
             />
           </div>
+
           <div className="mb-6">
             <label className="block text-gray-500 text-sm font-bold mb-1">Rol</label>
             <select
@@ -178,16 +195,20 @@ export function Register() {
               <option value="Consejero">Consejero</option>
             </select>
           </div>
+
           <div className="flex justify-between">
             <button
+              type="submit"
               className="bg-secundaryColor hover:bg-secundaryColor-100 text-white font-bold text-sm py-2 px-4 rounded focus:outline-none focus:shadow-outline"
               disabled={loading}
             >
-              {loading ? "Loading..." : "Registrar"}
+              {loading ? "Registrando..." : "Registrar"}
             </button>
-            <button className="bg-red-500 hover:bg-red-700 text-white font-bold text-sm py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-              <Link to="/login">Login</Link>
-            </button>
+            <Link to="/login">
+              <button className="bg-red-500 hover:bg-red-700 text-white font-bold text-sm py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                Login
+              </button>
+            </Link>
           </div>
         </form>
         {error && <Alert message={error} />}

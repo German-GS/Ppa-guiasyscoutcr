@@ -7,6 +7,7 @@ import {
   faFolderOpen,
   faClipboardList,
   faSignOutAlt,
+  faUser  // ✅ ESTE FALTABA
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../context/authContext";
 import { useNavigate } from "react-router-dom";
@@ -34,6 +35,7 @@ const Sidebar = ({ onNavigate }) => {
           {user?.displayName || "Consejero"}
         </span>
       </div>
+
       <nav className="flex flex-col gap-4">
         <button className={baseButtonClasses} onClick={() => onNavigate("agregar")}>
           <FontAwesomeIcon icon={faUserPlus} className="mr-2" /> Agregar Guía Mayor / Rover
@@ -50,6 +52,12 @@ const Sidebar = ({ onNavigate }) => {
         <button className={baseButtonClasses} onClick={() => onNavigate("ppas")}>
           <FontAwesomeIcon icon={faClipboardList} className="mr-2" /> PPAs
         </button>
+
+        {/* Nuevo botón de perfil */}
+        <button className={baseButtonClasses} onClick={() => onNavigate("perfil")}>
+          <FontAwesomeIcon icon={faUser} className="mr-2" /> Mi Perfil
+        </button>
+
         <button
           className="text-left mt-auto transition-colors hover:text-red-400"
           onClick={handleLogout}

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/authContext";
 
@@ -7,45 +7,50 @@ export function ModalAgregarProtagonista({ onClose }) {
   const [email, setEmail] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
-  const { user } = useAuth();
+  const { user } = useAuth() 
 
-  const handleAgregar = async () => {
-    setMensaje("");
-    setError("");
+// ...
 
-    if (!email) {
-      setError("Debes ingresar un correo electrónico.");
+const handleAgregar = async () => {
+  setMensaje("");
+  setError("");
+
+  if (!email) {
+    setError("Debes ingresar un correo electrónico.");
+    return;
+  }
+
+  try {
+    // Buscar usuario por email (no por ID directo)
+    const q = query(collection(db, "users"), where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      setError("No se encontró un usuario con ese correo.");
       return;
     }
 
-    try {
-      const usersRef = doc(db, "users", email);
-      const userSnap = await getDoc(usersRef);
+    const userSnap = querySnapshot.docs[0];
+    const data = userSnap.data();
 
-      if (!userSnap.exists()) {
-        setError("No se encontró un usuario con ese correo.");
-        return;
-      }
-
-      const data = userSnap.data();
-
-      if (data.rol !== "protagonista") {
-        setError("El usuario no tiene el rol de protagonista.");
-        return;
-      }
-
-      await setDoc(doc(db, "consejeros", user.uid, "protagonistas", email), {
-        email,
-        agregadoEn: new Date(),
-      });
-
-      setMensaje("Protagonista agregado correctamente.");
-      setEmail("");
-    } catch (err) {
-      console.error(err);
-      setError("Ocurrió un error al agregar al protagonista.");
+    if (data.rol !== "Protagonista") {
+      setError("El usuario no tiene el rol de protagonista.");
+      return;
     }
-  };
+
+    await setDoc(doc(db, "consejeros", user.uid, "protagonistas", userSnap.id), {
+      email,
+      agregadoEn: new Date(),
+    });
+
+    setMensaje("Protagonista agregado correctamente.");
+    setEmail("");
+  } catch (err) {
+    console.error(err);
+    setError("Ocurrió un error al agregar al protagonista.");
+  }
+};
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
@@ -59,7 +64,7 @@ export function ModalAgregarProtagonista({ onClose }) {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded mb-4"
+          className="w-full p-2 border border-gray-300 rounded mb-4 text-gray-800"
           placeholder="correo@ejemplo.com"
         />
 

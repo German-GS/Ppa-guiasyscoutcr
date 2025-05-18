@@ -2,18 +2,34 @@ import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import comunidadIcon from "../img/COMUNIDAD-ICONO-1.png";
 import { ModalAgregarProtagonista } from "./ModalAgregarProtagonista";
+import { useAuth } from "../context/authContext";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
+import { ProtagonistasGrid } from "./ProtagonistaGrid";
 
 export function AdminSeccion() {
-  const [currentView, setCurrentView] = useState("agregar");
+  const [currentView, setCurrentView] = useState("inicio");
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [perfil, setPerfil] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    console.log("Vista actual:", currentView);
-    console.log("¿Mostrar modal?:", mostrarModal);
-  }, [currentView, mostrarModal]);
+    const cargarPerfil = async () => {
+      if (user) {
+        const perfilRef = doc(db, "users", user.uid);
+        const perfilSnap = await getDoc(perfilRef);
+        if (perfilSnap.exists()) {
+          setPerfil(perfilSnap.data());
+        }
+      }
+    };
+
+    if (currentView === "perfil") {
+      cargarPerfil();
+    }
+  }, [currentView, user]);
 
   const handleNavigation = (view) => {
-    console.log("Navegando a:", view);
     setCurrentView(view);
     setMostrarModal(view === "agregar");
   };
@@ -28,12 +44,20 @@ export function AdminSeccion() {
         return <div>Sección de Expedientes</div>;
       case "ppas":
         return <div>Sección de PPAs</div>;
-      case "salir":
-        return <div>Sesión cerrada</div>;
+      case "perfil":
+        return perfil ? (
+          <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-6">
+            {/* ...contenido de perfil */}
+          </div>
+        ) : (
+          <div className="text-gray-600">Cargando perfil...</div>
+        );
+      case "inicio":
       default:
-        return <div>Use el botón del menú para agregar un Guía Mayor / Rover.</div>;
+        return <ProtagonistasGrid />;
     }
   };
+  
 
   return (
     <div className="flex h-screen">

@@ -11,26 +11,36 @@ export function FlujoLogin() {
 
   useEffect(() => {
     const redirigir = async () => {
-      if (loading) return; // Espera que se resuelva el estado de autenticación
+      if (loading) return;
+
       if (!user) {
         navigate("/login");
         return;
       }
 
-      const perfilRef = doc(db, "users", user.uid);
-      const perfilSnap = await getDoc(perfilRef);
+      try {
+        const perfilRef = doc(db, "users", user.uid);
+        const perfilSnap = await getDoc(perfilRef);
 
-      if (!perfilSnap.exists()) {
-        navigate("/completar-perfil");
-        return;
-      }
+        if (!perfilSnap.exists()) {
+          console.log("No se encontró perfil para UID:", user.uid);
+          navigate("/completar-perfil");
+          return;
+        }
 
-      const data = perfilSnap.data();
-      if (data.rol === "Protagonista") {
-        navigate("/home");
-      } else if (data.rol === "Consejero") {
-        navigate("/admin");
-      } else {
+        const data = perfilSnap.data();
+        const rol = data.rol?.toLowerCase();
+
+        if (rol === "protagonista") {
+          navigate("/home");
+        } else if (rol === "consejero") {
+          navigate("/admin");
+        } else {
+          navigate("/completar-perfil");
+        }
+
+      } catch (error) {
+        console.error("Error al obtener perfil:", error);
         navigate("/completar-perfil");
       }
     };
@@ -38,6 +48,6 @@ export function FlujoLogin() {
     redirigir();
   }, [user, loading, navigate]);
 
-  return null; // No renderiza nada, solo redirige
+  return null;
 }
 
