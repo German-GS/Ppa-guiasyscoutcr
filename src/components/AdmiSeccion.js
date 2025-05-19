@@ -6,12 +6,14 @@ import { useAuth } from "../context/authContext";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { ProtagonistasGrid } from "./ProtagonistaGrid";
+import { ExpedienteProtagonista } from "./ExpedienteProtagonista"; // ✅ este era el que faltaba
 
 export function AdminSeccion() {
   const [currentView, setCurrentView] = useState("inicio");
   const [mostrarModal, setMostrarModal] = useState(false);
   const [perfil, setPerfil] = useState(null);
   const { user } = useAuth();
+  const [protagonistaSeleccionado, setProtagonistaSeleccionado] = useState(null);
 
   useEffect(() => {
     const cargarPerfil = async () => {
@@ -32,6 +34,12 @@ export function AdminSeccion() {
   const handleNavigation = (view) => {
     setCurrentView(view);
     setMostrarModal(view === "agregar");
+    setProtagonistaSeleccionado(null);
+  };
+
+  const handleSeleccionProtagonista = (protagonistaData) => {
+    setProtagonistaSeleccionado(protagonistaData);
+    setCurrentView("expedienteProtagonista");
   };
 
   const renderSection = () => {
@@ -47,17 +55,46 @@ export function AdminSeccion() {
       case "perfil":
         return perfil ? (
           <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-6">
-            {/* ...contenido de perfil */}
+            <h2 className="text-xl font-bold text-scout mb-4">Mi Perfil</h2>
+            <div className="flex items-center space-x-4 mb-6">
+              <img
+                src={user?.photoURL || "/img/avatar-default.png"}
+                alt="Foto de perfil"
+                className="w-20 h-20 rounded-full object-cover border"
+              />
+              <div>
+                <p className="text-lg font-semibold text-gray-800">{perfil.nombre} {perfil.apellido}</p>
+                <p className="text-gray-600">{perfil.email}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-gray-700">
+              <div><strong>Edad:</strong> {perfil.edad}</div>
+              <div><strong>Rol:</strong> {perfil.rol}</div>
+              <div><strong>Grupo Scout:</strong> {perfil.grupo}</div>
+              <div><strong>Provincia:</strong> {perfil.provincia}</div>
+              <div><strong>Cantón:</strong> {perfil.canton}</div>
+              <div><strong>Distrito:</strong> {perfil.distrito}</div>
+            </div>
           </div>
         ) : (
           <div className="text-gray-600">Cargando perfil...</div>
         );
+      case "expedienteProtagonista":
+        return protagonistaSeleccionado ? (
+          <ExpedienteProtagonista
+            protagonista={protagonistaSeleccionado}
+            onVolver={() => setCurrentView("inicio")}
+          />
+        ) : (
+          <div className="text-gray-500">No se ha seleccionado ningún protagonista.</div>
+        );
       case "inicio":
       default:
-        return <ProtagonistasGrid />;
+        return (
+          <ProtagonistasGrid onSelectProtagonista={handleSeleccionProtagonista} />
+        );
     }
   };
-  
 
   return (
     <div className="flex h-screen">

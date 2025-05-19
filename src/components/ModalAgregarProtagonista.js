@@ -40,8 +40,13 @@ const handleAgregar = async () => {
 
     await setDoc(doc(db, "consejeros", user.uid, "protagonistas", userSnap.id), {
       email,
+      uid: userSnap.id,
+      nombre: data.nombre || "",
+      apellido: data.apellido || "",
+      photoURL: data.photoURL || "",
       agregadoEn: new Date(),
     });
+    
 
     setMensaje("Protagonista agregado correctamente.");
     setEmail("");
