@@ -9,68 +9,79 @@ import { db } from "../firebase";
 
 export function Register() {
   const [user, setUser] = useState({
-    email: "",
-    password: "",
-    nombre: "",
-    apellido: "",
-    edad: "",
-    grupo: "",
-    provincia: "",
-    canton: "",
-    distrito: "",
-    rol: "Protagonista",
-  });
+  email: "",
+  password: "",
+  nombre: "",
+  apellido: "",
+  edad: "",
+  grupo: "",
+  provincia: "",
+  canton: "",
+  distrito: "",
+  rol: "Protagonista",
+  fechaNacimiento: "",
+  fechaIngreso: "", // <-- nuevo campo
+});
+
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const [success, setSuccess] = useState(null);
+
 
   const handleChange = ({ target: { name, value } }) => {
     setUser({ ...user, [name]: value });
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  e.preventDefault();
+  setError("");
+  setSuccess("");
+  setLoading(true);
 
-    try {
-      const cred = await signup(user.email, user.password);
+  try {
+    const cred = await signup(user.email, user.password);
 
-      if (!cred.user || !cred.user.uid) {
-        throw new Error("No se pudo crear el usuario.");
-      }
-
-      const perfil = {
-        nombre: user.nombre,
-        apellido: user.apellido,
-        edad: user.edad,
-        grupo: user.grupo,
-        provincia: user.provincia,
-        canton: user.canton,
-        distrito: user.distrito,
-        rol: user.rol,
-        email: user.email,
-      };
-
-      await setDoc(doc(db, "users", cred.user.uid), perfil);
-      console.log("Perfil guardado en Firestore:", cred.user.uid);
-
-      alert("Registro exitoso. Ahora puedes iniciar sesión.");
-      navigate("/login");
-
-    } catch (error) {
-      console.error(error);
-      if (error.code === "auth/email-already-in-use") {
-        setError("El correo electrónico ya está registrado.");
-      } else {
-        setError("Error al registrar el usuario.");
-      }
-    } finally {
-      setLoading(false);
+    if (!cred.user || !cred.user.uid) {
+      throw new Error("No se pudo crear el usuario.");
     }
-  };
+
+    const perfil = {
+      nombre: user.nombre,
+      apellido: user.apellido,
+      edad: user.edad,
+      grupo: user.grupo,
+      provincia: user.provincia,
+      canton: user.canton,
+      distrito: user.distrito,
+      rol: user.rol,
+      email: user.email,
+      fechaNacimiento: user.fechaNacimiento,
+      fechaIngreso: user.fechaIngreso,
+    };
+
+    await setDoc(doc(db, "users", cred.user.uid), perfil);
+    console.log("Perfil guardado en Firestore:", cred.user.uid);
+
+    setSuccess("Registro exitoso. Ahora puedes iniciar sesión.");
+
+    // Esperar unos segundos antes de redirigir
+    setTimeout(() => navigate("/login"), 2000);
+
+  } catch (error) {
+    console.error(error);
+    if (error.code === "auth/email-already-in-use") {
+      setError("El correo electrónico ya está registrado.");
+    } else {
+      setError("Error al registrar el usuario.");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="w-full max-w-2xl m-auto">
@@ -80,9 +91,9 @@ export function Register() {
           <h2 className="text-xl font-bold text-gray-600">Registro</h2>
           <img src={comunidadIcon} alt="Icono Comunidad" className="w-10 h-10" />
         </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <form onSubmit={handleSubmit}>
+          {/* Primera fila */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block text-gray-500 text-sm font-bold mb-1">Nombre</label>
               <input
@@ -104,6 +115,20 @@ export function Register() {
               />
             </div>
             <div>
+              <label className="block text-gray-500 text-sm font-bold mb-1">Grupo Scout</label>
+              <input
+                type="text"
+                name="grupo"
+                className="text-gray-600 border-none text-sm rounded-lg bg-gray-300 block w-full p-2.5"
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
+          {/* Segunda fila: Edad y fechas */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div>
               <label className="block text-gray-500 text-sm font-bold mb-1">Edad</label>
               <input
                 type="number"
@@ -114,10 +139,20 @@ export function Register() {
               />
             </div>
             <div>
-              <label className="block text-gray-500 text-sm font-bold mb-1">Grupo Scout</label>
+              <label className="block text-gray-500 text-sm font-bold mb-1">Fecha de nacimiento</label>
               <input
-                type="text"
-                name="grupo"
+                type="date"
+                name="fechaNacimiento"
+                className="text-gray-600 border-none text-sm rounded-lg bg-gray-300 block w-full p-2.5"
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-gray-500 text-sm font-bold mb-1">F. de ingreso al movimiento</label>
+              <input
+                type="date"
+                name="fechaIngreso"
                 className="text-gray-600 border-none text-sm rounded-lg bg-gray-300 block w-full p-2.5"
                 onChange={handleChange}
                 required
@@ -211,7 +246,8 @@ export function Register() {
             </Link>
           </div>
         </form>
-        {error && <Alert message={error} />}
+
+        {success && <Alert message={success} type="success" />}
       </div>
     </div>
   );

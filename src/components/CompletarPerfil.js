@@ -20,7 +20,10 @@ export function CompletarPerfil() {
     distrito: "",
     rol: "protagonista",
     email: "",
+    fechaNacimiento: "",
+    fechaIngreso: ""
   });
+
 
   useEffect(() => {
     const fullName = user?.displayName?.split(" ") || [];
@@ -144,6 +147,31 @@ export function CompletarPerfil() {
               />
             </div>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-gray-600 text-sm font-bold mb-1">Fecha de Nacimiento</label>
+            <input
+              type="date"
+              name="fechaNacimiento"
+              value={form.fechaNacimiento}
+              onChange={handleChange}
+              className="bg-gris w-full p-2 rounded text-gray-800"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-600 text-sm font-bold mb-1">Fecha de Ingreso al Movimiento</label>
+            <input
+              type="date"
+              name="fechaIngreso"
+              value={form.fechaIngreso}
+              onChange={handleChange}
+              className="bg-gris w-full p-2 rounded text-gray-800"
+              required
+            />
+          </div>
+        </div>
+
 
           <div className="mt-4">
             <label className="block text-gray-600 text-sm font-bold mb-1">Rol</label>

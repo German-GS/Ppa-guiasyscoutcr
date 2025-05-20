@@ -20,6 +20,7 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
   });
 
   const [datosPerfil, setDatosPerfil] = useState(null);
+  const [rolEditado, setRolEditado] = useState("");
 
   useEffect(() => {
     const cargarDatosExtra = async () => {
@@ -33,10 +34,10 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
             ...data.etapas || {},
           }));
           setDatosPerfil(data);
+          setRolEditado(data.rol || "protagonista");
         }
       }
     };
-
     cargarDatosExtra();
   }, [protagonista]);
 
@@ -48,18 +49,15 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
     });
   };
 
+  const handleRolChange = (e) => {
+    setRolEditado(e.target.value);
+  };
+
   const guardarCambios = async () => {
     if (!protagonista?.uid) return;
     try {
       const ref = doc(db, "users", protagonista.uid);
-      if (!protagonista.uid) {
-        console.error("UID del protagonista no está definido");
-        return alert("UID del protagonista no está definido");
-      }
-      
-      console.log("Guardando para UID:", protagonista.uid);
-      console.log("Datos a guardar:", formData);
-      await setDoc(ref, { etapas: formData }, { merge: true });
+      await setDoc(ref, { etapas: formData, rol: rolEditado }, { merge: true });
       alert("Datos guardados exitosamente.");
     } catch (error) {
       console.error("Error al guardar:", error);
@@ -67,9 +65,46 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
     }
   };
 
+  const calcularEdad = (fechaNacimientoStr) => {
+    if (!fechaNacimientoStr) return null;
+    const nacimiento = new Date(fechaNacimientoStr);
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const m = hoy.getMonth() - nacimiento.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+    return edad;
+  };
+
+  const tiempoMovimiento = (fechaIngresoStr) => {
+    if (!fechaIngresoStr) return null;
+    const ingreso = new Date(fechaIngresoStr);
+    const hoy = new Date();
+    const diff = hoy.getFullYear() - ingreso.getFullYear();
+    return diff;
+  };
+
+  const mensajeCercania21 = (fechaNacimientoStr) => {
+    if (!fechaNacimientoStr) return null;
+    const fecha21 = new Date(fechaNacimientoStr);
+    fecha21.setFullYear(fecha21.getFullYear() + 21);
+    const hoy = new Date();
+    const diferencia = fecha21.getTime() - hoy.getTime();
+    const mesesRestantes = diferencia / (1000 * 60 * 60 * 24 * 30);
+    if (mesesRestantes <= 7 && mesesRestantes > 0) {
+      return "Está cercano a remar su propia canoa";
+    }
+    return "OK!!";
+  };
+
   if (!protagonista || !datosPerfil) {
     return <div className="text-gray-800">Cargando datos del protagonista...</div>;
   }
+
+  const edadCalculada = calcularEdad(datosPerfil.fechaNacimiento);
+  const añosMovimiento = tiempoMovimiento(datosPerfil.fechaIngreso);
+  const estadoRemar = mensajeCercania21(datosPerfil.fechaNacimiento);
 
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-lg shadow p-6 text-gray-800">
@@ -79,7 +114,7 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
         </h2>
         <button
           onClick={onVolver}
-          className="text-blue-600 hover:underline text-sm"
+          className="bg-yellow-500 text-white px-3 py-1 text-sm rounded hover:bg-yellow-600"
         >
           ← Volver
         </button>
@@ -98,8 +133,21 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div><strong>Edad:</strong> {datosPerfil.edad}</div>
-        <div><strong>Rol:</strong> {datosPerfil.rol}</div>
+        <div><strong>Edad:</strong> {edadCalculada} años</div>
+        <div><strong>Estado:</strong> <span className="text-blue-500">{estadoRemar}</span></div>
+        <div><strong>Tiempo en el movimiento:</strong> {añosMovimiento} años</div>
+        <div><strong>Fecha de nacimiento:</strong> {datosPerfil.fechaNacimiento}</div>
+        <div><strong>Fecha de ingreso:</strong> {datosPerfil.fechaIngreso}</div>
+        <div><strong>Rol:</strong> 
+          <select
+            value={rolEditado}
+            onChange={handleRolChange}
+            className="ml-2 p-1 border rounded text-gray-800"
+          >
+            <option value="protagonista">Protagonista</option>
+            <option value="consejero">Consejero</option>
+          </select>
+        </div>
         <div><strong>Grupo Scout:</strong> {datosPerfil.grupo}</div>
         <div><strong>Provincia:</strong> {datosPerfil.provincia}</div>
         <div><strong>Cantón:</strong> {datosPerfil.canton}</div>

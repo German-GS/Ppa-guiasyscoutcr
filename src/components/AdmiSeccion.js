@@ -6,14 +6,19 @@ import { useAuth } from "../context/authContext";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { ProtagonistasGrid } from "./ProtagonistaGrid";
-import { ExpedienteProtagonista } from "./ExpedienteProtagonista"; // ✅ este era el que faltaba
+import { ExpedienteProtagonista } from "./ExpedienteProtagonista";
 
 export function AdminSeccion() {
   const [currentView, setCurrentView] = useState("inicio");
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [recargar, setRecargar] = useState(false);
   const [perfil, setPerfil] = useState(null);
   const { user } = useAuth();
   const [protagonistaSeleccionado, setProtagonistaSeleccionado] = useState(null);
+
+  const handleProtagonistaAgregado = () => {
+    setRecargar(prev => !prev); // cambia para forzar reload
+  };
 
   useEffect(() => {
     const cargarPerfil = async () => {
@@ -91,7 +96,10 @@ export function AdminSeccion() {
       case "inicio":
       default:
         return (
-          <ProtagonistasGrid onSelectProtagonista={handleSeleccionProtagonista} />
+          <ProtagonistasGrid
+            onSelectProtagonista={handleSeleccionProtagonista}
+            recargar={recargar} // ✅ prop para forzar actualización
+          />
         );
     }
   };
@@ -108,7 +116,10 @@ export function AdminSeccion() {
       </main>
 
       {mostrarModal && (
-        <ModalAgregarProtagonista onClose={() => setMostrarModal(false)} />
+        <ModalAgregarProtagonista
+          onClose={() => setMostrarModal(false)}
+          onProtagonistaAgregado={handleProtagonistaAgregado} // ✅ notifica al padre
+        />
       )}
     </div>
   );

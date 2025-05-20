@@ -2,60 +2,63 @@ import React, { useState } from "react";
 import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/authContext";
+import { Alert } from "./Alert";
 
-export function ModalAgregarProtagonista({ onClose }) {
+export function ModalAgregarProtagonista({ onClose, onProtagonistaAgregado }) {
   const [email, setEmail] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
-  const { user } = useAuth() 
+  const { user } = useAuth();
 
-// ...
+  const handleAgregar = async () => {
+    setMensaje("");
+    setError("");
 
-const handleAgregar = async () => {
-  setMensaje("");
-  setError("");
-
-  if (!email) {
-    setError("Debes ingresar un correo electrónico.");
-    return;
-  }
-
-  try {
-    // Buscar usuario por email (no por ID directo)
-    const q = query(collection(db, "users"), where("email", "==", email));
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
-      setError("No se encontró un usuario con ese correo.");
+    if (!email) {
+      setError("Debes ingresar un correo electrónico.");
       return;
     }
 
-    const userSnap = querySnapshot.docs[0];
-    const data = userSnap.data();
+    try {
+      const q = query(collection(db, "users"), where("email", "==", email));
+      const querySnapshot = await getDocs(q);
 
-    if (data.rol !== "Protagonista") {
-      setError("El usuario no tiene el rol de protagonista.");
-      return;
+      if (querySnapshot.empty) {
+        setError("No se encontró un usuario con ese correo.");
+        return;
+      }
+
+      const userSnap = querySnapshot.docs[0];
+      const data = userSnap.data();
+
+      if (data.rol !== "Protagonista") {
+        setError("El usuario no tiene el rol de protagonista.");
+        return;
+      }
+
+      await setDoc(doc(db, "consejeros", user.uid, "protagonistas", userSnap.id), {
+        email,
+        uid: userSnap.id,
+        nombre: data.nombre || "",
+        apellido: data.apellido || "",
+        photoURL: data.photoURL || "",
+        agregadoEn: new Date(),
+      });
+
+      setMensaje("Protagonista agregado correctamente.");
+
+      // Notificar al padre para que recargue la lista
+      if (onProtagonistaAgregado) onProtagonistaAgregado();
+
+      // Cerrar el modal luego de una pequeña espera
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+      setError("Ocurrió un error al agregar al protagonista.");
     }
-
-    await setDoc(doc(db, "consejeros", user.uid, "protagonistas", userSnap.id), {
-      email,
-      uid: userSnap.id,
-      nombre: data.nombre || "",
-      apellido: data.apellido || "",
-      photoURL: data.photoURL || "",
-      agregadoEn: new Date(),
-    });
-    
-
-    setMensaje("Protagonista agregado correctamente.");
-    setEmail("");
-  } catch (err) {
-    console.error(err);
-    setError("Ocurrió un error al agregar al protagonista.");
-  }
-};
-
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
@@ -73,10 +76,10 @@ const handleAgregar = async () => {
           placeholder="correo@ejemplo.com"
         />
 
-        {mensaje && <p className="text-green-600 text-sm mb-2">{mensaje}</p>}
-        {error && <p className="text-red-600 text-sm mb-2">{error}</p>}
+        {mensaje && <Alert message={mensaje} type="success" />}
+        {error && <Alert message={error} type="error" />}
 
-        <div className="flex justify-end space-x-2">
+        <div className="flex justify-end space-x-2 mt-4">
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm bg-gray-400 text-white rounded hover:bg-gray-500"
