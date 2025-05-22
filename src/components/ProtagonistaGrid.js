@@ -11,7 +11,15 @@ export function ProtagonistasGrid({ onSelectProtagonista, recargar }) {
     if (!user) return;
     const colRef = collection(db, "consejeros", user.uid, "protagonistas");
     const snapshot = await getDocs(colRef);
-    const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const data = snapshot.docs.map((doc) => {
+    const d = doc.data();
+    return {
+      id: doc.id,
+      uid: d.userId ?? doc.id,  // usa el campo userId o el id del documento
+      ...d
+    };
+  });
+
     setProtagonistas(data);
   };
 

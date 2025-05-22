@@ -5,6 +5,7 @@ import {
   collection,
   addDoc,
   getDocs,
+  getDoc, // ✅ AGREGAR ESTA LÍNEA
   serverTimestamp,
   query,
   where,
@@ -16,6 +17,7 @@ import {
   orderBy,
   setDoc
 } from "firebase/firestore";
+
 import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
@@ -95,20 +97,31 @@ export const registerUserWithProfile = async (email, password, profileData) => {
 };
 
 // Actualizar un PPA existente
+// firebase.js
 export const updatePpa = async (ppaId, ppaData) => {
   try {
-    if (!ppaId) {
-      throw new Error("ID de PPA no proporcionado");
-    }
+    if (!ppaId) throw new Error("ID de PPA no proporcionado");
 
-    const normalizedData = normalizePpaData(ppaData);
-    await updateDoc(doc(db, 'PPA', ppaId), normalizedData);
+    const ppaRef = doc(db, 'PPA', ppaId);
+    const existingSnap = await getDoc(ppaRef);
+
+    if (!existingSnap.exists()) throw new Error("El PPA no existe");
+
+    const existingData = existingSnap.data();
+
+    const normalizedData = normalizePpaData({
+      ...existingData,
+      ...ppaData
+    });
+
+    await updateDoc(ppaRef, normalizedData);
     return { id: ppaId, ...normalizedData };
   } catch (error) {
     console.error("Error al actualizar PPA:", error);
     throw error;
   }
 };
+
 
 // Escuchar cambios en un solo documento PPA
 export const onPpaUpdate = (ppaId, callback) => {

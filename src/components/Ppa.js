@@ -5,8 +5,7 @@ import { faEdit, faPrint, faTimes } from "@fortawesome/free-solid-svg-icons";
 import comunidadIcon from "../img/COMUNIDAD-ICONO-1.png";
 
 export function Ppa({ selectedPpa, closeModal, onEdit }) {
-  const [currentPpa, setCurrentPpa] = useState(() => normalizePpaData(selectedPpa));
-  const [loading, setLoading] = useState(false);
+  const [currentPpa, setCurrentPpa] = useState(null);
 
   function normalizePpaData(ppa) {
     if (!ppa) return {};
@@ -27,17 +26,9 @@ export function Ppa({ selectedPpa, closeModal, onEdit }) {
 
   function ensureArray(data) {
     if (!data) return [];
-    if (Array.isArray(data)) return data.filter(item => item != null && item !== '');
-    return [String(data)].filter(item => item !== '');
+    if (Array.isArray(data)) return data.filter(item => item !== "");
+    return [String(data)].filter(item => item !== "");
   }
-
-  useEffect(() => {
-    setCurrentPpa(normalizePpaData(selectedPpa));
-    const unsubscribe = onPpaUpdate(selectedPpa.id, (updatedPpa) => {
-      setCurrentPpa(normalizePpaData(updatedPpa));
-    });
-    return () => unsubscribe();
-  }, [selectedPpa.id]);
 
   const formatDateTime = (date) => {
     if (!date) return "No especificada";
@@ -46,29 +37,38 @@ export function Ppa({ selectedPpa, closeModal, onEdit }) {
     return date;
   };
 
-  const renderItems = (items, fieldName) => {
-    if (!items || items.length === 0 || (items.length === 1 && items[0] === "")) {
-      return <p className="text-gray-500">No hay {fieldName} registrados</p>;
-    }
-    return (
-      <ul className="space-y-1">
-        {items.filter(item => item !== "").map((item, i) => (
-          <li key={i} className="flex items-start">
-            <span className="text-sm font-semibold mr-2">{i + 1}.</span>
-            <span>{item}</span>
-          </li>
-        ))}
-      </ul>
-    );
-  };
+  const renderItems = (items, label) => (
+    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+      <h3 className="text-lg font-semibold mb-2 text-scout">{label}</h3>
+      {items.length === 0 ? (
+        <p className="text-gray-500">No hay {label.toLowerCase()} registrados</p>
+      ) : (
+        <ul className="space-y-1">
+          {items.map((item, i) => (
+            <li key={i} className="flex items-start">
+              <span className="text-sm font-semibold mr-2">{i + 1}.</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-scout"></div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!selectedPpa) return;
+
+    const initial = normalizePpaData(selectedPpa);
+    setCurrentPpa(initial);
+
+    const unsubscribe = onPpaUpdate(selectedPpa.id, updatedPpa => {
+      setCurrentPpa(normalizePpaData(updatedPpa));
+    });
+
+    return () => unsubscribe();
+  }, [selectedPpa]);
+
+  if (!currentPpa) return null;
 
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden max-h-[90vh] overflow-y-auto">
@@ -84,57 +84,30 @@ export function Ppa({ selectedPpa, closeModal, onEdit }) {
 
       <div className="text-sm text-gray-600 px-4 pt-2">
         <p>Creado: {formatDateTime(currentPpa.createdAt)}</p>
-        {currentPpa.modifiedAt && <p>Modificado: {formatDateTime(currentPpa.modifiedAt)}</p>}
+        <p>Modificado: {formatDateTime(currentPpa.modifiedAt)}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-2 text-scout">Sueños</h3>
-          {renderItems(currentPpa.suenos, "sueños")}
-        </div>
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-2 text-scout">Retos</h3>
-          {renderItems(currentPpa.retos, "retos")}
-        </div>
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-2 text-scout">Fortalezas</h3>
-          {renderItems(currentPpa.fortalezas, "fortalezas")}
-        </div>
+        {renderItems(currentPpa.suenos, "Sueños")}
+        {renderItems(currentPpa.retos, "Retos")}
+        {renderItems(currentPpa.fortalezas, "Fortalezas")}
       </div>
 
       <hr className="border-t border-gray-300 my-4 mx-4" />
       <h3 className="text-xl font-bold text-scout px-4 mb-2">Áreas de Crecimiento</h3>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4 pb-4">
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-2 text-scout">Carácter</h3>
-          {renderItems(currentPpa.caracter, "carácter")}
-        </div>
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-2 text-scout">Afectividad</h3>
-          {renderItems(currentPpa.afectividad, "afectividad")}
-        </div>
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-2 text-scout">Creatividad</h3>
-          {renderItems(currentPpa.creatividad, "creatividad")}
-        </div>
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-2 text-scout">Sociabilidad</h3>
-          {renderItems(currentPpa.sociabilidad, "sociabilidad")}
-        </div>
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-2 text-scout">Corporabilidad</h3>
-          {renderItems(currentPpa.corporabilidad, "corporabilidad")}
-        </div>
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-2 text-scout">Espiritualidad</h3>
-          {renderItems(currentPpa.espiritualidad, "espiritualidad")}
-        </div>
+        {renderItems(currentPpa.caracter, "Carácter")}
+        {renderItems(currentPpa.afectividad, "Afectividad")}
+        {renderItems(currentPpa.creatividad, "Creatividad")}
+        {renderItems(currentPpa.sociabilidad, "Sociabilidad")}
+        {renderItems(currentPpa.corporabilidad, "Corporabilidad")}
+        {renderItems(currentPpa.espiritualidad, "Espiritualidad")}
       </div>
 
       <div className="p-4 border-t border-gray-200">
         <h3 className="text-xl font-bold text-scout mb-3">Plan de Acción</h3>
-        {currentPpa.actividad?.length > 0 ? (
+        {currentPpa.actividad.length > 0 ? (
           <div className="space-y-3">
             {currentPpa.actividad.map((item, index) => (
               <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
