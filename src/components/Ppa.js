@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEdit, faPrint, faTimes } from "@fortawesome/free-solid-svg-icons";
 import comunidadIcon from "../img/COMUNIDAD-ICONO-1.png";
 
-export function Ppa({ selectedPpa, closeModal, onEdit }) {
+export function Ppa({ selectedPpa, closeModal, onEdit,  mostrarBotonEditar = true}) {
   const [currentPpa, setCurrentPpa] = useState(null);
 
   function normalizePpaData(ppa) {
@@ -138,13 +138,16 @@ export function Ppa({ selectedPpa, closeModal, onEdit }) {
           Imprimir
         </button>
         <div className="flex flex-col sm:flex-row sm:space-x-2 w-full sm:w-auto">
-          <button
-            onClick={() => onEdit(currentPpa)}
-            className="w-full sm:w-auto mb-2 sm:mb-0 px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors flex items-center justify-center"
-          >
-            <FontAwesomeIcon icon={faEdit} className="mr-2" />
-            Modificar
-          </button>
+          {mostrarBotonEditar && (
+            <button
+              onClick={() => onEdit(currentPpa)}
+              className="w-full sm:w-auto mb-2 sm:mb-0 px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors flex items-center justify-center"
+            >
+              <FontAwesomeIcon icon={faEdit} className="mr-2" />
+              Modificar
+            </button>
+          )}
+
           <button
             onClick={closeModal}
             className="w-full sm:w-auto px-4 py-2 bg-gray-500 text-white hover:bg-gray-600 rounded-lg transition-colors"

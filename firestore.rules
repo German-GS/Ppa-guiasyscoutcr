@@ -1,10 +1,50 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /PPA/{document=**} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.createdBy;
+
+    // Reglas para usuarios
+   match /users/{userId} {
+      // El dueño puede leer y escribir su propio perfil
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Consejero puede leer perfil de sus protagonistas
+      allow read: if request.auth != null &&
+        exists(/databases/$(database)/documents/consejeros/$(request.auth.uid)/protagonistas/$(userId));
+
+      // Consejero puede modificar ciertos campos del perfil del protagonista
+      allow update: if request.auth != null &&
+        exists(/databases/$(database)/documents/consejeros/$(request.auth.uid)/protagonistas/$(userId)) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "etapas",
+          "campamento1",
+          "campamento2",
+          "campamento3",
+          "rol",
+          "updatedAt"
+        ]);
+    }
+
+
+    // Reglas para PPA (Progresión Personal de Acción)
+    match /PPA/{ppaId} {
+      allow read, write: if request.auth != null && (
+        // El dueño del PPA
+        request.auth.uid == resource.data.userId ||
+        // O un consejero vinculado
+        exists(/databases/$(database)/documents/consejeros/$(request.auth.uid)/protagonistas/$(resource.data.userId))
+      );
+    }
+
+    // Reglas para la colección de consejeros
+    match /consejeros/{consejeroId} {
+      allow read, write: if request.auth != null && request.auth.uid == consejeroId;
+
+      // Subcolección de protagonistas
+      match /protagonistas/{protaId} {
+        allow read, write: if request.auth != null && request.auth.uid == consejeroId;
+      }
     }
   }
 }
+
+

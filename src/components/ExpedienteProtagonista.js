@@ -8,9 +8,10 @@ import {
   where,
   getDocs
 } from "firebase/firestore";
-import { db } from "../firebase";
 import Swal from "sweetalert2";
+import { db } from "../firebase";
 import { Ppa } from "./Ppa";
+
 
 export function ExpedienteProtagonista({ protagonista, onVolver }) {
   const [formData, setFormData] = useState({
@@ -80,42 +81,78 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
     setRolEditado(e.target.value);
   };
 
-  const guardarCambios = async () => {
-    if (!protagonista?.uid) return;
 
-    const confirm = await Swal.fire({
-      title: "¿Deseas guardar los cambios?",
-      text: "Estás a punto de actualizar el expediente.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#aaa",
-      confirmButtonText: "Sí, guardar",
-      cancelButtonText: "Cancelar",
+const guardarCambios = async () => {
+  try {
+    if (!protagonista?.uid) {
+      throw new Error("ID de protagonista no definido");
+    }
+
+    const datosCompletos = {
+      uid: protagonista.uid,
+      nombre: formData.nombre || datosPerfil.nombre || '',
+      apellido: formData.apellido || datosPerfil.apellido || '',
+      email: datosPerfil.email, // El email no debería cambiar
+      grupo: datosPerfil.grupo || '307',
+      provincia: datosPerfil.provincia || 'San José',
+      canton: datosPerfil.canton || 'Merced',
+      distrito: datosPerfil.distrito || '',
+      fechaNacimiento: datosPerfil.fechaNacimiento,
+      fechaIngreso: datosPerfil.fechaIngreso,
+      rol: rolEditado,
+      etapas: {
+        ...formData,
+        decisionFecha: formData.decision ? formData.decisionFecha : null,
+        compromisoFecha: formData.compromiso ? formData.compromisoFecha : null
+      },
+      updatedAt: new Date().toISOString()
+    };
+
+      await setDoc(doc(db, "users", protagonista.uid), {
+        etapas: {
+          ...formData,
+          decisionFecha: formData.decision ? formData.decisionFecha : null,
+          compromisoFecha: formData.compromiso ? formData.compromisoFecha : null
+        },
+        campamento1: formData.campamento1 || "",
+        campamento2: formData.campamento2 || "",
+        campamento3: formData.campamento3 || "",
+        rol: rolEditado,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+
+    Swal.fire({
+      title: "¡Éxito!",
+      text: "Expediente actualizado correctamente",
+      icon: "success"
     });
 
-    if (!confirm.isConfirmed) return;
+    setDatosPerfil(prev => ({
+      ...prev,
+      etapas: {
+        ...formData,
+        decisionFecha: formData.decision ? formData.decisionFecha : null,
+        compromisoFecha: formData.compromiso ? formData.compromisoFecha : null
+      },
+      campamento1: formData.campamento1 || "",
+      campamento2: formData.campamento2 || "",
+      campamento3: formData.campamento3 || "",
+      rol: rolEditado,
+      updatedAt: new Date().toISOString()
+    }));
 
-    try {
-      const ref = doc(db, "users", protagonista.uid);
-      await setDoc(ref, { etapas: formData, rol: rolEditado }, { merge: true });
 
-      Swal.fire({
-        icon: "success",
-        title: "Guardado exitoso",
-        text: "Los datos del expediente han sido actualizados.",
-        confirmButtonColor: "#3085d6",
-      });
-    } catch (error) {
-      console.error("Error al guardar:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error al guardar",
-        text: "Hubo un problema al guardar los datos.",
-        confirmButtonColor: "#d33",
-      });
-    }
-  };
+  } catch (error) {
+    console.error("Error al guardar:", error);
+
+    Swal.fire({
+      title: "Error",
+      text: error.message || "Error desconocido al guardar",
+      icon: "error"
+    });
+  }
+};
 
   const calcularEdad = (fechaNacimientoStr) => {
     if (!fechaNacimientoStr) return null;
@@ -317,11 +354,12 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
 
       {selectedPpa && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white max-w-5xl w-full rounded-lg shadow-lg relative">
+          <div className="bg-white text-gray-800 max-w-5xl w-full rounded-lg shadow-lg relative">
             <Ppa
               selectedPpa={selectedPpa}
               closeModal={() => setSelectedPpa(null)}
               onEdit={() => {}}
+              mostrarBotonEditar={false}
             />
           </div>
         </div>

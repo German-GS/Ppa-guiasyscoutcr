@@ -36,6 +36,7 @@ const auth = getAuth(app);
 const analytics = getAnalytics(app);
 const db = getFirestore(app);
 
+
 // Normalización de datos antes de guardar/actualizar
 const normalizePpaData = (ppaData) => {
   return {
@@ -235,8 +236,13 @@ export {
   app,
   auth,
   db,
-  analytics
+  analytics,
+  collection,
+  addDoc,
+  getDocs,
+  getDoc,
 };
+
 
 
 
