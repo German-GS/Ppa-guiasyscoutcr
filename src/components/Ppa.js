@@ -1,0 +1,161 @@
+import React, { useState, useEffect } from "react";
+import { onPpaUpdate } from "../firebase";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEdit, faPrint, faTimes } from "@fortawesome/free-solid-svg-icons";
+import comunidadIcon from "../img/COMUNIDAD-ICONO-1.png";
+
+export function Ppa({ selectedPpa, closeModal, onEdit,  mostrarBotonEditar = true}) {
+  const [currentPpa, setCurrentPpa] = useState(null);
+
+  function normalizePpaData(ppa) {
+    if (!ppa) return {};
+    return {
+      ...ppa,
+      suenos: ensureArray(ppa.suenos),
+      retos: ensureArray(ppa.retos),
+      fortalezas: ensureArray(ppa.fortalezas),
+      corporabilidad: ensureArray(ppa.corporabilidad),
+      creatividad: ensureArray(ppa.creatividad),
+      afectividad: ensureArray(ppa.afectividad),
+      espiritualidad: ensureArray(ppa.espiritualidad),
+      caracter: ensureArray(ppa.caracter),
+      sociabilidad: ensureArray(ppa.sociabilidad),
+      actividad: Array.isArray(ppa.actividad) ? ppa.actividad : []
+    };
+  }
+
+  function ensureArray(data) {
+    if (!data) return [];
+    if (Array.isArray(data)) return data.filter(item => item !== "");
+    return [String(data)].filter(item => item !== "");
+  }
+
+  const formatDateTime = (date) => {
+    if (!date) return "No especificada";
+    if (date instanceof Date) return date.toLocaleString();
+    if (date?.toDate instanceof Function) return date.toDate().toLocaleString();
+    return date;
+  };
+
+  const renderItems = (items, label) => (
+    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+      <h3 className="text-lg font-semibold mb-2 text-scout">{label}</h3>
+      {items.length === 0 ? (
+        <p className="text-gray-500">No hay {label.toLowerCase()} registrados</p>
+      ) : (
+        <ul className="space-y-1">
+          {items.map((item, i) => (
+            <li key={i} className="flex items-start">
+              <span className="text-sm font-semibold mr-2">{i + 1}.</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
+  useEffect(() => {
+    if (!selectedPpa) return;
+
+    const initial = normalizePpaData(selectedPpa);
+    setCurrentPpa(initial);
+
+    const unsubscribe = onPpaUpdate(selectedPpa.id, updatedPpa => {
+      setCurrentPpa(normalizePpaData(updatedPpa));
+    });
+
+    return () => unsubscribe();
+  }, [selectedPpa]);
+
+  if (!currentPpa) return null;
+
+  return (
+    <div className="bg-white rounded-lg shadow-lg overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div className="bg-scout text-white px-4 py-3 flex justify-between items-center sticky top-0 z-10">
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-bold">Detalles del PPA</h2>
+          <img src={comunidadIcon} alt="Comunidad" className="w-10 h-10" />
+        </div>
+        <button onClick={closeModal} className="text-white hover:text-gray-200" aria-label="Cerrar modal">
+          <FontAwesomeIcon icon={faTimes} size="lg" />
+        </button>
+      </div>
+
+      <div className="text-sm text-gray-600 px-4 pt-2">
+        <p>Creado: {formatDateTime(currentPpa.createdAt)}</p>
+        <p>Modificado: {formatDateTime(currentPpa.modifiedAt)}</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+        {renderItems(currentPpa.suenos, "Sueños")}
+        {renderItems(currentPpa.retos, "Retos")}
+        {renderItems(currentPpa.fortalezas, "Fortalezas")}
+      </div>
+
+      <hr className="border-t border-gray-300 my-4 mx-4" />
+      <h3 className="text-xl font-bold text-scout px-4 mb-2">Áreas de Crecimiento</h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4 pb-4">
+        {renderItems(currentPpa.caracter, "Carácter")}
+        {renderItems(currentPpa.afectividad, "Afectividad")}
+        {renderItems(currentPpa.creatividad, "Creatividad")}
+        {renderItems(currentPpa.sociabilidad, "Sociabilidad")}
+        {renderItems(currentPpa.corporabilidad, "Corporabilidad")}
+        {renderItems(currentPpa.espiritualidad, "Espiritualidad")}
+      </div>
+
+      <div className="p-4 border-t border-gray-200">
+        <h3 className="text-xl font-bold text-scout mb-3">Plan de Acción</h3>
+        {currentPpa.actividad.length > 0 ? (
+          <div className="space-y-3">
+            {currentPpa.actividad.map((item, index) => (
+              <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium">Actividad</h4>
+                    <p>{item.actividad || "No especificada"}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Fecha</h4>
+                    <p>{formatDateTime(item.fecha)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500">No hay actividades registradas</p>
+        )}
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:justify-between p-4 border-t border-gray-200 bg-white sticky bottom-0 space-y-2 sm:space-y-0 sm:space-x-2">
+        <button
+          onClick={() => window.print()}
+          className="w-full sm:w-auto px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center"
+        >
+          <FontAwesomeIcon icon={faPrint} className="mr-2" />
+          Imprimir
+        </button>
+        <div className="flex flex-col sm:flex-row sm:space-x-2 w-full sm:w-auto">
+          {mostrarBotonEditar && (
+            <button
+              onClick={() => onEdit(currentPpa)}
+              className="w-full sm:w-auto mb-2 sm:mb-0 px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors flex items-center justify-center"
+            >
+              <FontAwesomeIcon icon={faEdit} className="mr-2" />
+              Modificar
+            </button>
+          )}
+
+          <button
+            onClick={closeModal}
+            className="w-full sm:w-auto px-4 py-2 bg-gray-500 text-white hover:bg-gray-600 rounded-lg transition-colors"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

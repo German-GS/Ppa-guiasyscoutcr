@@ -1,0 +1,256 @@
+:root {
+  /* Colores principales */
+  --color-scout: #ED1A39;       /* Rojo scout principal */
+  --color-scout-dark: #D01732;  /* Rojo scout oscuro (hover) */
+  --color-scout-light: #F8E5E8; /* Variante clara para fondos */
+
+  /* ... otros colores ... */
+  --color-scout-orange: #FFA400;
+  
+  /* Colores neutros */
+  --color-white: #FFFFFF;
+  --color-gray-50: #F9FAFB;
+  --color-gray-100: #F3F4F6;
+  --color-gray-200: #E5E7EB;
+  --color-gray-700: #374151;
+  --color-gray-800: #1F2937;
+  --color-gray-900: #111827;
+  
+  /* Colores de feedback */
+  --color-success: #10B981;
+  --color-error: #EF4444;
+  --color-warning: #F59E0B;
+  --color-info: #3B82F6;
+}
+
+.text-scout-secondary {
+ color: var(--color-scout-orange);; /* Morado de fondo institucional */
+}
+
+/* Estilos base */
+.App {
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--color-gray-50);
+  min-height: 100vh;
+}
+
+.card {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  padding: 1rem;
+}
+
+
+/* Estilo para el botón principal */
+.btn-ppa-primary {
+  background-color: var(--color-scout);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.btn-ppa-primary:hover {
+  background-color: var(--color-scout-orange);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Componentes reutilizables */
+.btn-scout-red, .btn-ppa-primary {
+  background-color: var(--color-scout);
+  color: var(--color-white);
+  transition: background-color 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.btn-scout-red:hover {
+  background-color: var(--color-scout-dark);
+}
+
+/* Estilo para el icono dentro del botón */
+.btn-scout-red svg {
+  margin-right: 0.25rem;
+}
+
+.bg-scout-light {
+  background-color: var(--color-scout-light);
+}
+
+.text-scout {
+  color: var(--color-scout);
+}
+
+.btn-warning {
+  background-color: var(--color-warning);
+  color: white;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.btn-warning:hover {
+  background-color: #d97706; /* tono más oscuro del warning */
+}
+
+/* Estilos para los botones de acción */
+.action-btn {
+  transition: all 0.2s ease;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+.calendar-btn {
+  color: var(--color-blue-500);
+  background-color: var(--color-blue-50);
+}
+
+.calendar-btn:hover {
+  color: var(--color-blue-700);
+}
+
+.calendar-btn.added {
+  color: var(--color-green-500);
+  background-color: var(--color-green-50);
+}
+
+.calendar-btn.added:hover {
+  color: var(--color-green-700);
+}
+
+.delete-btn {
+  color: var(--color-red-500);
+  background-color: var(--color-red-50);
+}
+
+.delete-btn:hover {
+  color: var(--color-red-700);
+} 
+
+.modal-enter {
+  opacity: 0;
+  transform: scale(0.9);
+}
+.modal-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 200ms, transform 200ms;
+}
+
+/* Animaciones */
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Media queries */
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+@media (max-width: 1024px) {
+  .md-hidden {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn-scout-red,
+  .btn-ppa-primary {
+    font-size: 0.875rem;
+    padding: 0.5rem;
+  }
+}
+
+
+@media (max-width: 767px) {
+  .hidden-md {
+    display: block !important;
+  }
+  
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+
+  .p-4 {
+    padding: 1rem !important;
+  }
+
+  .space-y-6 > * + * {
+    margin-top: 1rem !important;
+  }
+
+  .text-xl {
+    font-size: 1.25rem !important;
+  }
+
+  .rounded-lg {
+    border-radius: 0.75rem !important;
+  }
+
+  .btn-scout-red,
+  .btn-ppa-primary {
+    width: 100%;
+    font-size: 1rem;
+    padding: 0.75rem;
+    justify-content: center;
+  }
+
+  .grid {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .gap-6 {
+    gap: 1rem !important;
+  }
+
+  .mobile-input-wrapper {
+    padding-bottom: 1rem;
+  }
+   .protagonistas-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem;
+  }
+
+  .protagonista-card {
+    width: 100%;
+  }
+}
+
+/* Estilos específicos de componentes (opcional) */
+.App-header {
+  background-color: var(--color-gray-800);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: var(--color-white);
+}
+
+.App-link {
+  color: var(--color-info);
+  transition: color 0.3s ease;
+}
+.App-link:hover {
+  color: var(--color-scout);
+}
