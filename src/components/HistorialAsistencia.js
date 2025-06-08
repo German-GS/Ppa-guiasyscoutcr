@@ -81,64 +81,68 @@ export function HistorialAsistencia() {
   }, [user, fechaInicio, fechaFin]);
 
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-4 text-scout-secondary">Historial de Asistencia</h2>
+  <div className="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow text-gray-800">
+    <h2 className="text-2xl font-bold text-scout-secondary mb-2">Historial de Asistencia</h2>
+    <p className="text-sm text-gray-500 mb-6 italic">
+      Consulta el porcentaje de asistencia en el rango de fechas seleccionado
+    </p>
 
-      <div className="flex flex-col md:flex-row items-start gap-4 mb-6">
-        <div>
-          <label className="block mb-1 text-sm text-gray-700">Desde</label>
-          <input
-            type="date"
-            value={fechaInicio}
-            onChange={e => setFechaInicio(e.target.value)}
-            className="border border-gray-300 bg-white text-gray-800 rounded px-3 py-2 focus:ring-scout focus:border-scout"
-            />
-
-        </div>
-        <div>
-          <label className="block mb-1 text-sm text-gray-700">Hasta</label>
-          <input
-            type="date"
-            value={fechaFin}
-            onChange={e => setFechaFin(e.target.value)}
-            className="border border-gray-300 bg-white text-gray-800 rounded px-3 py-2 focus:ring-scout focus:border-scout"
-            />
-
-        </div>
+    <div className="flex flex-col md:flex-row gap-6 mb-6">
+      <div className="flex-1">
+        <label className="block text-sm text-gray-700 mb-1">Desde</label>
+        <input
+          type="date"
+          value={fechaInicio}
+          onChange={e => setFechaInicio(e.target.value)}
+          className="border-input"
+        />
       </div>
+      <div className="flex-1">
+        <label className="block text-sm text-gray-700 mb-1">Hasta</label>
+        <input
+          type="date"
+          value={fechaFin}
+          onChange={e => setFechaFin(e.target.value)}
+          className="border-input"
+        />
+      </div>
+    </div>
 
-      {loading ? (
-        <p className="text-gray-800">Cargando historial...</p>
-      ) : (
-        <>
-          <p className="mb-2 text-sm text-gray-600">
-            Total de fechas en el rango: <strong>{totalFechas}</strong>
-          </p>
-          <table className="w-full border-collapse">
+    {loading ? (
+      <p className="text-gray-600 italic">⏳ Cargando historial de asistencia...</p>
+    ) : (
+      <>
+        <p className="mb-4 text-sm text-gray-600">
+          Total de fechas analizadas: <strong>{totalFechas}</strong>
+        </p>
+
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="bg-gray-100">
-                <th className="border p-2 text-left text-gray-700">Nombre Protagonista</th>
-                <th className="border p-2 text-center text-gray-700">Asistencias</th>
-                <th className="border p-2 text-center text-gray-700">Porcentaje</th>
+              <tr className="bg-gray-100 text-left">
+                <th className="border p-3 text-gray-700">Nombre</th>
+                <th className="border p-3 text-center text-gray-700">Asistencias</th>
+                <th className="border p-3 text-center text-gray-700">% Asistencia</th>
               </tr>
             </thead>
             <tbody>
               {Object.entries(resumen).map(([protaId, resumenData]) => {
                 const prota = protagonistas.find(p => p.id === protaId);
                 return (
-                  <tr key={protaId} className="bg-white hover:bg-gray-50 transition-colors">
-                    <td className="border p-2 text-gray-800">
+                  <tr key={protaId} className="hover:bg-gray-50 transition">
+                    <td className="border p-3 text-gray-800">
                       {prota ? `${prota.nombre} ${prota.apellido}` : "Nombre no disponible"}
                     </td>
-                    <td className="border p-2 text-center text-gray-800">{resumenData.asistencias}</td>
-                    <td className="border p-2 text-center text-gray-800">{resumenData.porcentaje}%</td>
+                    <td className="border p-3 text-center">{resumenData.asistencias}</td>
+                    <td className="border p-3 text-center">{resumenData.porcentaje}%</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-        </>
-      )}
-    </div>
-  );
+        </div>
+      </>
+    )}
+  </div>
+);
 }

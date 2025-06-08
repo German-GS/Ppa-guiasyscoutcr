@@ -53,32 +53,36 @@ export function ProtagonistasGrid({ onSelectProtagonista, recargar }) {
 
 
   return (
-    <div>
-      <h2 className="text-xl font-bold text-scout-secondary mb-4">Mis Protagonistas</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        {protagonistas.map((prota) => (
-          <div
-            key={prota.id}
-            className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition relative"
+  <div>
+    <h2 className="text-lg font-semibold text-[#e69500] mt-4 mb-4">
+      Protagonistas
+    </h2>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+      {protagonistas.map((prota) => (
+        <div
+          key={prota.id}
+          onClick={() => handleClick(prota)}
+          className="bg-white rounded-xl shadow-md p-4 hover:shadow-xl transition-all transform hover:scale-105 cursor-pointer relative"
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation(); // evitar que dispare el click general
+              handleEliminar(prota.id);
+            }}
+            className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full hover:bg-red-600 transition"
+            title="Eliminar protagonista"
           >
-            <button
-              onClick={() => handleEliminar(prota.id)}
-              className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded hover:bg-red-600"
-              title="Eliminar"
-            >
-              ✕
-            </button>
-            <div onClick={() => handleClick(prota)} className="cursor-pointer">
-              <div className="cursor-pointer" onClick={() => handleClick(prota)}>
-                <h3 className="text-lg font-bold text-gray-800">
-                  {prota.nombre || "Sin nombre"}
-                </h3>
-                <p className="text-sm text-gray-600">{prota.email}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+            ✕
+          </button>
+
+          <h3 className="text-lg font-bold text-gray-800">
+            {prota.nombre || "Sin nombre"}
+          </h3>
+          <p className="text-sm text-gray-600">{prota.email}</p>
+        </div>
+      ))}
     </div>
-  );
+  </div>
+);
+
 }

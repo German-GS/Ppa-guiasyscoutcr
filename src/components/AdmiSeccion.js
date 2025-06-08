@@ -130,49 +130,57 @@ export function AdminSeccion() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen">
-      {/* Botón hamburguesa solo en mobile */}
-      <div className="md:hidden flex justify-between items-center p-4 bg-scout text-white">
-        <h1 className="text-lg font-bold">Admin Sección</h1>
-        <button onClick={toggleSidebar}>
-          <Menu className="w-6 h-6" />
-        </button>
-      </div>
-
-      {/* Sidebar: oculto en mobile, visible si abierto */}
-      <div
-        className={`fixed md:static top-0 left-0 z-50 h-full w-64 bg-scout text-white transform transition-transform duration-200 ease-in-out
-        ${sidebarAbierto ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
-      >
-        <Sidebar onNavigate={(view) => {
-          setSidebarAbierto(false);
-          handleNavigation(view);
-        }} />
-      </div>
-
-      {/* Fondo oscuro al abrir el sidebar (mobile) */}
-      {sidebarAbierto && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-40 z-40 md:hidden"
-          onClick={toggleSidebar}
-        />
-      )}
-
-      <main className="flex-1 bg-gray-50 p-4 md:p-8 overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-xl md:text-2xl font-bold text-red-700">Administración de la Sección</h1>
-          <img src={comunidadIcon} alt="Comunidad" className="w-8 md:w-10 h-8 md:h-10" />
-        </div>
-        {renderSection()}
-      </main>
-
-       {mostrarModal && (
-        <ModalAgregarProtagonista
-          onClose={() => setMostrarModal(false)}
-          onProtagonistaAgregado={handleProtagonistaAgregado}
-          consejeroNombre={perfil?.nombre || "Consejero"}
-        />
-      )}
+  <div className="flex flex-col md:flex-row min-h-screen">
+    {/* Botón hamburguesa solo en mobile */}
+    <div className="md:hidden flex justify-between items-center p-4 bg-morado-principal text-white">
+      <h1 className="text-lg font-bold">Admin Sección</h1>
+      <button onClick={toggleSidebar}>
+        <Menu className="w-6 h-6" />
+      </button>
     </div>
-  );
+
+    {/* Sidebar: oculto en mobile, visible si abierto */}
+    <div
+      className={`fixed md:static top-0 left-0 z-50 h-full w-64 bg-morado-principal text-white transform transition-transform duration-200 ease-in-out
+      ${sidebarAbierto ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+    >
+      <Sidebar onNavigate={(view) => {
+        setSidebarAbierto(false);
+        handleNavigation(view);
+      }} />
+    </div>
+
+    {/* Fondo oscuro al abrir el sidebar (mobile) */}
+    {sidebarAbierto && (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-40 z-40 md:hidden"
+        onClick={toggleSidebar}
+      />
+    )}
+
+    <main className="flex-1 bg-fondo-claro p-4 md:p-8 overflow-y-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-morado-principal">
+            Administración de la Sección
+          </h1>
+          <p className="text-gray-500 text-sm italic">
+            “Siempre listo para servir”
+          </p>
+        </div>
+        <img src={comunidadIcon} alt="Comunidad" className="w-8 md:w-10 h-8 md:h-10" />
+      </div>
+      {renderSection()}
+    </main>
+
+    {mostrarModal && (
+      <ModalAgregarProtagonista
+        onClose={() => setMostrarModal(false)}
+        onProtagonistaAgregado={handleProtagonistaAgregado}
+        consejeroNombre={perfil?.nombre || "Consejero"}
+      />
+    )}
+  </div>
+);
+
 }

@@ -11,6 +11,8 @@ import {
 import Swal from "sweetalert2";
 import { db } from "../firebase";
 import { Ppa } from "./Ppa";
+import { ArrowLeft } from "lucide-react";
+
 
 
 export function ExpedienteProtagonista({ protagonista, onVolver }) {
@@ -217,18 +219,17 @@ const guardarCambios = async () => {
   return (
     <>
       <div className="max-w-4xl mx-auto bg-white rounded-lg shadow p-6 text-gray-800">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-scout-secondary">
-            Expediente de {datosPerfil.nombre} {datosPerfil.apellido}
-          </h2>
-          <button
-            onClick={onVolver}
-            className="btn-warning px-3 py-1 text-sm rounded hover:bg-yellow-600"
-          >
-            ← Volver
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-morado-principal">
+              Expediente de {datosPerfil.nombre} {datosPerfil.apellido}
+            </h2>
+            <p className="text-sm text-gray-500 italic">Ficha editable de progresión personal</p>
+          </div>
+          <button onClick={onVolver} className="btn-warning">
+            <ArrowLeft size={16} /> Volver
           </button>
         </div>
-
         <div className="flex items-center space-x-6 mb-6">
           <img
             src={datosPerfil.photoURL || "/img/avatar-default.png"}
@@ -247,16 +248,18 @@ const guardarCambios = async () => {
           <div><strong>Tiempo en el movimiento:</strong> {añosMovimiento} años</div>
           <div><strong>Fecha de nacimiento:</strong> {datosPerfil.fechaNacimiento}</div>
           <div><strong>Fecha de ingreso:</strong> {datosPerfil.fechaIngreso}</div>
-          <div><strong>Rol:</strong>
-            <select
-              value={rolEditado}
-              onChange={handleRolChange}
-              className="ml-2 p-1 border rounded text-gray-800"
-            >
-              <option value="protagonista">Protagonista</option>
-              <option value="consejero">Consejero</option>
-            </select>
-          </div>
+         <div className="flex items-center">
+          <strong className="mr-2">Rol:</strong>
+          <select
+            value={rolEditado}
+            onChange={handleRolChange}
+            className="border p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-morado-principal transition"
+          >
+            <option value="protagonista">Protagonista</option>
+            <option value="consejero">Consejero</option>
+          </select>
+        </div>
+
           <div><strong>Grupo Scout:</strong> {datosPerfil.grupo}</div>
           <div><strong>Provincia:</strong> {datosPerfil.provincia}</div>
           <div><strong>Cantón:</strong> {datosPerfil.canton}</div>
@@ -300,7 +303,7 @@ const guardarCambios = async () => {
                 name={dateField}
                 value={formData[dateField] || ""}
                 onChange={handleChange}
-                className="border p-1 rounded text-gray-800"
+                  className="border p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-morado-principal transition"
               />
             </div>
           ))}
@@ -316,7 +319,7 @@ const guardarCambios = async () => {
                 name={`campamento${n}`}
                 value={formData[`campamento${n}`] || ""}
                 onChange={handleChange}
-                className="border p-1 rounded text-gray-800"
+                  className="border p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-morado-principal transition"
               />
             </div>
           ))}
@@ -327,16 +330,17 @@ const guardarCambios = async () => {
           <textarea
             name="observaciones"
             rows="4"
-            className="w-full border rounded p-2 text-gray-800"
+            className="w-full border p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-morado-principal transition"
             value={formData.observaciones || ""}
             onChange={handleChange}
           />
+
         </div>
 
         <div className="flex justify-end">
           <button
             onClick={guardarCambios}
-            className="bg-scout text-white px-4 py-2 rounded hover:bg-yellow-500"
+            className="btn-morado px-4 py-2 rounded-lg text-sm font-medium hover:scale-105 transition shadow"
           >
             Guardar Cambios
           </button>
@@ -345,27 +349,25 @@ const guardarCambios = async () => {
 
       {ppaList.length > 0 && (
         <div className="max-w-4xl mx-auto mt-10">
-          <h3 className="text-xl font-bold text-scout mb-4">PPAs registrados por el protagonista</h3>
+          <h3 className="text-xl font-bold text-morado-principal mb-4">
+            PPAs registrados por el protagonista
+          </h3>
+
           <div className="space-y-4">
             {ppaList.map((ppa, index) => (
-              <div key={ppa.id} className="p-4 bg-gray-50 border rounded-lg shadow-sm flex justify-between items-center">
+              <div key={ppa.id} className="p-4 bg-white border rounded-xl shadow-sm flex justify-between items-center">
                 <div>
-                 <p className="text-sm text-gray-700">
-                  <strong>PPA #{index + 1}</strong> — Creado:{" "}
-                  {ppa.createdAt?.toDate ? ppa.createdAt.toDate().toLocaleDateString() : "Sin fecha"}
-                </p>
-
+                  <p className="text-sm text-gray-700">
+                    <strong>PPA #{index + 1}</strong> — Creado:{" "}
+                    {ppa.createdAt?.toDate ? ppa.createdAt.toDate().toLocaleDateString() : "Sin fecha"}
+                  </p>
                 </div>
                 <button
-                  onClick={() => {
-                    console.log("PPA seleccionado:", ppa); // 👈 Este log te dice qué datos está recibiendo el modal
-                    setSelectedPpa(ppa);
-                  }}
-                  className="bg-scout text-white px-3 py-1 rounded hover:bg-yellow-500"
+                  onClick={() => setSelectedPpa(ppa)}
+                  className="btn-morado px-4 py-2 rounded-lg text-sm font-medium hover:scale-105 transition shadow"
                 >
                   Ver detalles
                 </button>
-
               </div>
             ))}
           </div>

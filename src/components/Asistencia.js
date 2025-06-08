@@ -116,21 +116,24 @@ export function Asistencia() {
         </div>
       ) : (
         <>
-          <div className="mb-6 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             {protagonistas.map(prota => (
-              <div 
-                key={prota.id} 
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+              <div
+                key={prota.id}
+                className="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-all transform hover:scale-105 flex justify-between items-center"
               >
                 <div>
-                  <p className="font-medium text-gray-800">{prota.nombre} {prota.apellido}</p>
+                  <p className="font-semibold text-gray-800">
+                    {prota.nombre} {prota.apellido}
+                  </p>
                   <p className="text-sm text-gray-500">Grupo: {prota.grupo}</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={asistencias[prota.id] || false}
                   onChange={() => handleAsistenciaChange(prota.id)}
-                  className="h-5 w-5 text-scout focus:ring-scout border-gray-300 rounded"
+                  className="h-5 w-5 accent-[#FFA400] cursor-pointer"
+                  title="Marcar asistencia"
                 />
               </div>
             ))}
@@ -139,14 +142,13 @@ export function Asistencia() {
           <button
             onClick={guardarAsistencia}
             disabled={cargando || protagonistas.length === 0}
-            className={`px-6 py-2 rounded font-medium ${
-              cargando || protagonistas.length === 0
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-scout text-white hover:bg-yellow-600"
-            } transition-colors`}
+            className={`btn-morado px-6 py-2 rounded-lg font-semibold hover:scale-105 transition ${
+              cargando || protagonistas.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
             {cargando ? "Guardando..." : "Guardar Asistencia"}
           </button>
+
         </>
       )}
     </div>
