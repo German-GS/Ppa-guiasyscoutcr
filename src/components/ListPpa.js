@@ -51,10 +51,7 @@ export function ListPpa({ onEditPpa }) {
   };
 
   useEffect(() => {
-    if (!user?.uid) {
-      console.log("Usuario no autenticado");
-      return;
-    }
+    if (!user?.uid) return;
 
     setLoading(true);
 
@@ -85,24 +82,27 @@ export function ListPpa({ onEditPpa }) {
 
   return (
     <div className="px-4">
-      <h1 className="text-3xl mb-5 mt-5 p-2 text-center">Lista de PPA's realizados</h1>
+      <h1 className="text-3xl font-bold text-center text-scout mt-6 mb-4">PPA's Registrados</h1>
 
       {realtimePpaData.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-gray-500">No hay PPAs registrados aún</p>
+        <div className="text-center py-8 text-gray-500">
+          No hay PPAs registrados aún
         </div>
       ) : (
         <div className="space-y-4">
           {realtimePpaData.map((ppa, index) => (
-            <div key={ppa.id} className="bg-gray-50 p-4 rounded-lg shadow-sm flex flex-col lg:flex-row lg:justify-between lg:items-center">
-              <div className="mb-4 lg:mb-0">
-                <span className="block font-semibold text-gray-700">{index + 1}. Fecha y Hora de Creación:</span>
+            <div
+              key={ppa.id}
+              className="bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row md:justify-between md:items-center"
+            >
+              <div className="mb-4 md:mb-0">
+                <p className="font-semibold text-gray-800">{index + 1}. Fecha de Creación:</p>
                 <p>{formatDateTime(ppa.createdAt)}</p>
                 {ppa.modifiedAt && (
                   <p className="text-xs text-gray-500">Modificado: {formatDateTime(ppa.modifiedAt)}</p>
                 )}
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 space-y-2 sm:space-y-0">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={() => openModal(ppa)}
                   className="btn-scout-red text-white px-4 py-2 rounded-lg hover:bg-[#FFA400] transition-colors"

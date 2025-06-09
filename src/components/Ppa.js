@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEdit, faPrint, faTimes } from "@fortawesome/free-solid-svg-icons";
 import comunidadIcon from "../img/COMUNIDAD-ICONO-1.png";
 
-export function Ppa({ selectedPpa, closeModal, onEdit,  mostrarBotonEditar = true}) {
+export function Ppa({ selectedPpa, closeModal, onEdit, mostrarBotonEditar = true }) {
   const [currentPpa, setCurrentPpa] = useState(null);
 
   function normalizePpaData(ppa) {
@@ -38,15 +38,15 @@ export function Ppa({ selectedPpa, closeModal, onEdit,  mostrarBotonEditar = tru
   };
 
   const renderItems = (items, label) => (
-    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
-      <h3 className="text-lg font-semibold mb-2 text-scout">{label}</h3>
+    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm transition hover:shadow-md">
+      <h3 className="text-lg font-bold mb-2 text-morado-principal">{label}</h3>
       {items.length === 0 ? (
-        <p className="text-gray-500">No hay {label.toLowerCase()} registrados</p>
+        <p className="text-gray-500 italic">No hay {label.toLowerCase()} registrados</p>
       ) : (
-        <ul className="space-y-1">
+        <ul className="space-y-1 text-gray-800 text-sm">
           {items.map((item, i) => (
             <li key={i} className="flex items-start">
-              <span className="text-sm font-semibold mr-2">{i + 1}.</span>
+              <span className="font-semibold mr-2">{i + 1}.</span>
               <span>{item}</span>
             </li>
           ))}
@@ -70,33 +70,72 @@ export function Ppa({ selectedPpa, closeModal, onEdit,  mostrarBotonEditar = tru
 
   if (!currentPpa) return null;
 
+  const areaKeys = [
+    "caracter",
+    "afectividad",
+    "creatividad",
+    "sociabilidad",
+    "corporabilidad",
+    "espiritualidad"
+  ];
+
+  const getEnfasisDelCiclo = (ppa) => {
+    const conteos = areaKeys.map((key) => ({
+      area: key,
+      count: Array.isArray(ppa[key]) ? ppa[key].length : 0
+    }));
+
+    const max = Math.max(...conteos.map(c => c.count));
+    const secundarios = conteos.filter(c => c.count < max && c.count > 1);
+    const principal = conteos.find(c => c.count === max);
+
+    return {
+      enfasisPrincipal: principal?.area || "N/A",
+      enfasisSecundarios: secundarios.map(c => c.area)
+    };
+  };
+
+  const { enfasisPrincipal, enfasisSecundarios } = getEnfasisDelCiclo(currentPpa);
+
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden max-h-[90vh] overflow-y-auto">
-      <div className="bg-scout text-white px-4 py-3 flex justify-between items-center sticky top-0 z-10">
+    <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div className="bg-scout text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10">
         <div className="flex items-center gap-4">
           <h2 className="text-2xl font-bold">Detalles del PPA</h2>
           <img src={comunidadIcon} alt="Comunidad" className="w-10 h-10" />
         </div>
-        <button onClick={closeModal} className="text-white hover:text-gray-200" aria-label="Cerrar modal">
+        <button onClick={closeModal} className="text-white hover:text-gray-200 transition" aria-label="Cerrar modal">
           <FontAwesomeIcon icon={faTimes} size="lg" />
         </button>
       </div>
 
-      <div className="text-sm text-gray-600 px-4 pt-2">
+      <div className="text-sm text-gray-700 px-6 pt-4">
         <p>Creado: {formatDateTime(currentPpa.createdAt)}</p>
         <p>Modificado: {formatDateTime(currentPpa.modifiedAt)}</p>
+        <p className="mt-2">
+          <span className="font-semibold text-scout">Énfasis del ciclo:</span>{" "}
+          {enfasisPrincipal.charAt(0).toUpperCase() + enfasisPrincipal.slice(1)}
+        </p>
+        {enfasisSecundarios.length > 0 && (
+          <p>
+            <span className="font-medium text-morado-principal">Énfasis secundarios:</span>{" "}
+            {enfasisSecundarios
+              .map(e => e.charAt(0).toUpperCase() + e.slice(1))
+              .join(", ")}
+          </p>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
         {renderItems(currentPpa.suenos, "Sueños")}
         {renderItems(currentPpa.retos, "Retos")}
         {renderItems(currentPpa.fortalezas, "Fortalezas")}
       </div>
 
-      <hr className="border-t border-gray-300 my-4 mx-4" />
-      <h3 className="text-xl font-bold text-scout px-4 mb-2">Áreas de Crecimiento</h3>
+      <hr className="border-t border-gray-200 my-4 mx-6" />
+      <h3 className="text-xl font-bold text-scout px-6 mb-4">Áreas de Crecimiento</h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4 pb-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-6 pb-6">
         {renderItems(currentPpa.caracter, "Carácter")}
         {renderItems(currentPpa.afectividad, "Afectividad")}
         {renderItems(currentPpa.creatividad, "Creatividad")}
@@ -105,12 +144,12 @@ export function Ppa({ selectedPpa, closeModal, onEdit,  mostrarBotonEditar = tru
         {renderItems(currentPpa.espiritualidad, "Espiritualidad")}
       </div>
 
-      <div className="p-4 border-t border-gray-200">
-        <h3 className="text-xl font-bold text-scout mb-3">Plan de Acción</h3>
+      <div className="p-6 border-t border-gray-200 bg-gray-50">
+        <h3 className="text-xl font-bold text-scout mb-4">Plan de Acción</h3>
         {currentPpa.actividad.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {currentPpa.actividad.map((item, index) => (
-              <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <div key={index} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-medium">Actividad</h4>
@@ -125,14 +164,14 @@ export function Ppa({ selectedPpa, closeModal, onEdit,  mostrarBotonEditar = tru
             ))}
           </div>
         ) : (
-          <p className="text-gray-500">No hay actividades registradas</p>
+          <p className="text-gray-500 italic">No hay actividades registradas</p>
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:justify-between p-4 border-t border-gray-200 bg-white sticky bottom-0 space-y-2 sm:space-y-0 sm:space-x-2">
+      <div className="flex flex-col sm:flex-row sm:justify-between p-6 border-t border-gray-200 bg-white sticky bottom-0 space-y-2 sm:space-y-0 sm:space-x-2">
         <button
           onClick={() => window.print()}
-          className="w-full sm:w-auto px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center"
+          className="w-full sm:w-auto px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-xl transition-all flex items-center justify-center"
         >
           <FontAwesomeIcon icon={faPrint} className="mr-2" />
           Imprimir
@@ -141,7 +180,7 @@ export function Ppa({ selectedPpa, closeModal, onEdit,  mostrarBotonEditar = tru
           {mostrarBotonEditar && (
             <button
               onClick={() => onEdit(currentPpa)}
-              className="w-full sm:w-auto mb-2 sm:mb-0 px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors flex items-center justify-center"
+              className="w-full sm:w-auto mb-2 sm:mb-0 px-4 py-2 bg-morado-principal text-white hover:bg-[#220f4c] rounded-xl transition-all flex items-center justify-center"
             >
               <FontAwesomeIcon icon={faEdit} className="mr-2" />
               Modificar
@@ -150,7 +189,7 @@ export function Ppa({ selectedPpa, closeModal, onEdit,  mostrarBotonEditar = tru
 
           <button
             onClick={closeModal}
-            className="w-full sm:w-auto px-4 py-2 bg-gray-500 text-white hover:bg-gray-600 rounded-lg transition-colors"
+            className="w-full sm:w-auto px-4 py-2 bg-gray-500 text-white hover:bg-gray-600 rounded-xl transition-all"
           >
             Cerrar
           </button>

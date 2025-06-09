@@ -29,7 +29,11 @@
   /* Alias útiles */
   --color-scout-orange: var(--color-naranja-comunidad);
 
-  
+  /* 🎯 Alias y colores por rol */
+  --color-scout: var(--color-rojo-scout);
+  --color-scout-secondary: var(--color-naranja-comunidad);
+  --color-scout-dark: #b3152c;
+
 }
 
 .bg-morado-principal { background-color: var(--color-morado-principal); }
@@ -52,11 +56,23 @@
   transition: background-color 0.3s ease;
 }
 
-.btn-morado:hover {
-  background-color: #220f4c;
+
+
+.text-link-button:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+ /*Colores Comunidad*/
+.btn-scout-red, .btn-ppa-primary {
+  background-color: var(--color-scout);
+  color: var(--color-white);
 }
 
 
+.btn-morado:hover {
+  background-color: #220f4c;
+}
 
 .text-scout-secondary {
  color: var(--color-scout-orange);; /* Morado de fondo institucional */

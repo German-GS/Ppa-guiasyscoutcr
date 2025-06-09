@@ -9,6 +9,7 @@ import { ProtagonistasGrid } from "./ProtagonistaGrid";
 import { ExpedienteProtagonista } from "./ExpedienteProtagonista";
 import { Asistencia } from "./Asistencia";
 import { HistorialAsistencia } from "./HistorialAsistencia";
+import { MyPerfil } from "./MyPerfil";
 import { Menu } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -79,34 +80,7 @@ export function AdminSeccion() {
         return <div>Sección de PPAs</div>;
 
       case "perfil":
-        return perfil ? (
-          <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold text-scout mb-4">Mi Perfil</h2>
-            <div className="flex items-center space-x-4 mb-6">
-              <img
-                src={user?.photoURL || "/img/avatar-default.png"}
-                alt="Foto de perfil"
-                className="w-20 h-20 rounded-full object-cover border"
-              />
-              <div>
-                <p className="text-lg font-semibold text-gray-800">
-                  {perfil.nombre} {perfil.apellido}
-                </p>
-                <p className="text-gray-600">{perfil.email}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-gray-700">
-              <div><strong>Edad:</strong> {perfil.edad}</div>
-              <div><strong>Rol:</strong> {perfil.rol}</div>
-              <div><strong>Grupo Scout:</strong> {perfil.grupo}</div>
-              <div><strong>Provincia:</strong> {perfil.provincia}</div>
-              <div><strong>Cantón:</strong> {perfil.canton}</div>
-              <div><strong>Distrito:</strong> {perfil.distrito}</div>
-            </div>
-          </div>
-        ) : (
-          <div className="text-gray-600">Cargando perfil...</div>
-        );
+       return <MyPerfil />;
 
       case "expedienteProtagonista":
         return protagonistaSeleccionado ? (

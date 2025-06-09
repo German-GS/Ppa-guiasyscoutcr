@@ -54,14 +54,14 @@ export const InputForm = forwardRef(({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 bg-gray-50 p-4 rounded-lg shadow-sm">
       {inputs.map((input) => (
         <div key={input.id} className="flex items-center gap-2">
           <input
             type="text"
             value={input.value}
             onChange={(e) => handleInputChange(input.id, e.target.value)}
-            className="flex-1 text-gray-800 text-sm rounded-lg bg-gray-100 border border-gray-300 focus:ring-scout focus:border-scout block w-full p-2.5"
+            className="flex-1 text-gray-800 text-sm rounded-lg bg-white border border-gray-300 focus:ring-morado-principal focus:border-morado-principal block w-full p-2.5 shadow-sm"
             placeholder={placeholder}
             aria-label={placeholder}
           />
@@ -81,7 +81,7 @@ export const InputForm = forwardRef(({
       <button
         type="button"
         onClick={handleAddInput}
-        className={`mt-2 flex items-center text-sm focus:outline-none px-3 py-2 rounded ${addButtonClass}`}
+        className={`mt-2 flex items-center justify-center text-sm px-4 py-2 rounded-lg transition hover:scale-105 shadow-sm ${addButtonClass}`}
         aria-label="Agregar otro campo"
       >
         <FontAwesomeIcon icon={faPlus} className="mr-1" />
