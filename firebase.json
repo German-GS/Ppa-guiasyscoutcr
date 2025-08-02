@@ -1,12 +1,7 @@
 {
   "hosting": {
-    "site": "ppa-guiasyscout",
     "public": "build",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "**",
@@ -22,4 +17,3 @@
     "indexes": "firestore.indexes.json"
   }
 }
-

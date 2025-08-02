@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { db } from "../firebase";
+import { db } from "../../firebase";
 import { collection, getDocs, doc, setDoc } from "firebase/firestore";
-import { useAuth } from "../context/authContext";
+import { useAuth } from "../../context/authContext";
 import Swal from "sweetalert2";
 
 export function Asistencia() {
@@ -20,12 +20,15 @@ export function Asistencia() {
 
       try {
         // Cargar protagonistas desde la subcolección del consejero
-        const protagonistasRef = collection(db, `consejeros/${user.uid}/protagonistas`);
+        const protagonistasRef = collection(
+          db,
+          `consejeros/${user.uid}/protagonistas`
+        );
         const querySnapshot = await getDocs(protagonistasRef);
-        
-        const protagonistasData = querySnapshot.docs.map(doc => ({
+
+        const protagonistasData = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         }));
 
         console.log("Protagonistas cargados:", protagonistasData);
@@ -33,11 +36,10 @@ export function Asistencia() {
 
         // Inicializar estado de asistencias
         const estadoInicial = {};
-        protagonistasData.forEach(prota => {
+        protagonistasData.forEach((prota) => {
           estadoInicial[prota.id] = false;
         });
         setAsistencias(estadoInicial);
-
       } catch (error) {
         console.error("Error al cargar protagonistas:", error);
         Swal.fire("Error", "No se pudieron cargar los protagonistas", "error");
@@ -50,22 +52,25 @@ export function Asistencia() {
   }, [user]);
 
   const handleAsistenciaChange = (protagonistaId) => {
-    setAsistencias(prev => ({
+    setAsistencias((prev) => ({
       ...prev,
-      [protagonistaId]: !prev[protagonistaId]
+      [protagonistaId]: !prev[protagonistaId],
     }));
   };
 
   const guardarAsistencia = async () => {
     try {
       // Guardar en /asistencias/{fecha}
-      const asistenciaRef = doc(db, `consejeros/${user.uid}/asistencias/${fecha}`);
+      const asistenciaRef = doc(
+        db,
+        `consejeros/${user.uid}/asistencias/${fecha}`
+      );
       await setDoc(asistenciaRef, {
         fecha,
         consejeroId: user.uid,
         consejeroEmail: user.email,
         registros: asistencias,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       Swal.fire({
@@ -86,13 +91,17 @@ export function Asistencia() {
   };
 
   if (!user) {
-    return <div className="text-gray-600 p-4">Cargando datos de usuario...</div>;
+    return (
+      <div className="text-gray-600 p-4">Cargando datos de usuario...</div>
+    );
   }
 
   return (
     <div className="p-6 bg-gray-50 rounded-lg">
-      <h2 className="text-2xl font-bold mb-6 text-scout-secondary">Control de Asistencia</h2>
-      
+      <h2 className="text-2xl font-bold mb-6 text-scout-secondary">
+        Control de Asistencia
+      </h2>
+
       <div className="mb-6 bg-white p-4 rounded-lg shadow">
         <label className="block text-gray-700 mb-2 font-medium">Fecha:</label>
         <input
@@ -101,23 +110,26 @@ export function Asistencia() {
           onChange={(e) => setFecha(e.target.value)}
           className="text-gray-800 border border-gray-300 rounded px-3 py-2 w-full md:w-auto focus:ring-scout focus:border-scout"
         />
-
       </div>
 
       {cargando ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-scout mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando lista de protagonistas...</p>
+          <p className="mt-4 text-gray-600">
+            Cargando lista de protagonistas...
+          </p>
         </div>
       ) : protagonistas.length === 0 ? (
         <div className="bg-gray-100 p-6 rounded-lg text-center">
           <p className="text-gray-600">No hay protagonistas asignados.</p>
-          <p className="text-gray-500 mt-2">Agrega protagonistas desde el menú principal.</p>
+          <p className="text-gray-500 mt-2">
+            Agrega protagonistas desde el menú principal.
+          </p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-            {protagonistas.map(prota => (
+            {protagonistas.map((prota) => (
               <div
                 key={prota.id}
                 className="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-all transform hover:scale-105 flex justify-between items-center"
@@ -143,12 +155,13 @@ export function Asistencia() {
             onClick={guardarAsistencia}
             disabled={cargando || protagonistas.length === 0}
             className={`btn-morado px-6 py-2 rounded-lg font-semibold hover:scale-105 transition ${
-              cargando || protagonistas.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+              cargando || protagonistas.length === 0
+                ? "opacity-50 cursor-not-allowed"
+                : ""
             }`}
           >
             {cargando ? "Guardando..." : "Guardar Asistencia"}
           </button>
-
         </>
       )}
     </div>

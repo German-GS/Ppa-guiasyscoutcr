@@ -1,0 +1,23 @@
+.loginContainer {
+  background-color: var(--color-morado-principal); /* */
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.btnLogin {
+  background-color: var(--color-rojo-scout); /* */
+  color: white;
+  width: 100%;
+  padding-top: 0.75rem; /* 12px */
+  padding-bottom: 0.75rem; /* 12px */
+  font-weight: 700;
+  border-radius: 0.5rem; /* 8px */
+  transition: background-color 0.3s;
+}
+
+.btnLogin:hover {
+  background-color: var(--color-scout-dark); /* */
+}

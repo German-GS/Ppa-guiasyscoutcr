@@ -1,0 +1,18 @@
+/* En InputForm.module.css, debajo de los estilos de .btnAdd */
+
+.inputField {
+  display: block;
+  width: 100%;
+  padding: 0.625rem; /* 10px */
+  background-color: #f9fafb; /* gray-50 */
+  border: 1px solid #d1d5db; /* border-gray-300 */
+  color: #111827; /* gray-900 */
+  font-size: 0.875rem; /* 14px */
+  border-radius: 0.5rem; /* 8px */
+}
+
+.inputField:focus {
+  outline: none;
+  border-color: #3b82f6; /* Un azul para el foco */
+  box-shadow: 0 0 0 1px #3b82f6; /* Un anillo de foco */
+}

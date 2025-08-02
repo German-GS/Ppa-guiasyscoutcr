@@ -1,0 +1,9 @@
+/* En Register.module.css */
+.registerContainer {
+  background-color: var(--color-morado-principal);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem; /* Un poco más de padding vertical */
+}

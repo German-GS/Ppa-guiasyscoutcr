@@ -1,0 +1,8 @@
+.btnInvitar {
+  background-color: var(--color-morado-principal);
+  transition: background-color 0.2s; /* Opcional, para suavizar el hover */
+}
+
+.btnInvitar:hover {
+  background-color: #220f4c; /* El color de hover que ya tenías */
+}

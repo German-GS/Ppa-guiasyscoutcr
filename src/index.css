@@ -1,3 +1,151 @@
+/* ================================================= */
+/* 1. Importaciones base de Tailwind               */
+/* ================================================= */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ================================================= */
+/* 2. Estilos y variables globales                   */
+/* ================================================= */
+@layer base {
+  /* Aquí movemos tus variables de color de App.css */
+  :root {
+    /* 🎨 Colores institucionales principales */
+    --color-rojo-scout: #ed1a39;
+    --color-morado-principal: #2c1261;
+    --color-verde-tropa: #04bc99;
+    --color-amarillo-manada: #fec20e;
+    --color-naranja-comunidad: #ffa400;
+    --color-celeste-caminantes: #9bcfff;
+    --color-vino-clan: #6b184e;
+
+    /* 🌫️ Colores neutros y fondos */
+    --color-white: #ffffff;
+    --color-blanco: #ffffff;
+    --color-fondo-claro: #f7f8fa;
+    --color-gray-50: #f9fafb;
+    --color-gray-100: #f3f4f6;
+    --color-gray-200: #e5e7eb;
+    --color-gray-700: #374151;
+    --color-gray-800: #1f2937;
+    --color-gray-900: #111827;
+
+    /* ✅ Colores de feedback */
+    --color-success: #10b981;
+    --color-exito: #10b981;
+    --color-error: #250606;
+    --color-warning: #f59e0b;
+    --color-info: #3b82f6;
+
+    /* Alias útiles */
+    --color-scout-orange: var(--color-naranja-comunidad);
+
+    /* 🎯 Alias y colores por rol */
+    --color-scout: var(--color-rojo-scout);
+    --color-scout-secondary: var(--color-naranja-comunidad);
+    --color-scout-dark: #b3152c;
+  }
+
+  body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  }
+}
+
+/* =================================================================== */
+/* 3. Definición de componentes reutilizables con @apply             */
+/* =================================================================== */
+@layer components {
+  /* Clase para las tarjetas genéricas */
+  .card {
+    @apply bg-white rounded-lg shadow-md p-4;
+  }
+
+  /* Clase para los campos de entrada de formularios */
+  .border-input {
+    display: block;
+    width: 100%;
+    padding: 0.625rem; /* p-2.5 */
+    background-color: #f9fafb; /* bg-gray-50 */
+    border: 1px solid #d1d5db; /* border-gray-300 */
+    color: #111827; /* text-gray-900 */
+    font-size: 0.875rem; /* text-sm */
+    border-radius: 0.5rem; /* rounded-lg */
+  }
+
+  .border-input:focus {
+    outline: none;
+    border-color: #3b82f6; /* focus:border-blue-500 */
+    box-shadow: 0 0 0 1px #3b82f6; /* Esto simula focus:ring-1 focus:ring-blue-500 */
+  }
+
+  /* Botón de advertencia (naranja) */
+  .btn-warning {
+    background-color: var(
+      --color-scout
+    ); /* Valor directo de --color-rojo-scout */
+    color: var(--color-blanco); /* Valor directo de --color-white */
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-weight: 700;
+    border-radius: 0.5rem;
+    transition: background-color 0.3s ease;
+  }
+
+  /* Botón Principal Primario (Rojo) - Reescribiendo sin @apply */
+  .btn-primary {
+    background-color: #ed1a39; /* Valor directo de --color-rojo-scout */
+    color: #ffffff; /* Valor directo de --color-white */
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-weight: 700;
+    border-radius: 0.5rem;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn-primary:hover {
+    background-color: #b3152c; /* Valor directo de --color-scout-dark */
+  }
+
+  .btn-primary:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #ed1a39; /* Usando el valor directo */
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+  }
+  /* Le decimos a Tailwind qué color usar para el anillo CUANDO el botón esté en foco */
+  .btn-primary:focus {
+    --tw-ring-color: theme("colors.rojo-scout");
+  }
+
+  /* Botón Secundario (para acciones como 'Agregar otro') */
+  .btn-secondary {
+    background-color: var(--color-naranja-comunidad);
+    color: var(--color-gray-800);
+    font-weight: 600; /* font-semibold */
+    font-size: 0.875rem; /* text-sm */
+    padding: 0.25rem 1rem; /* py-1 px-4 */
+    border-radius: 0.5rem; /* rounded-lg */
+    transition: background-color 0.2s ease-in-out;
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-amarillo-manada); /* bg-gray-300 */
+  }
+
+  .btn-details {
+    background-color: var(--color-morado-principal);
+    color: var(--color-blanco);
+    font-weight: 600; /* font-semibold */
+    font-size: 0.875rem; /* text-sm */
+    padding: 0.25rem 1rem; /* py-1 px-4 */
+    border-radius: 0.5rem; /* rounded-lg */
+    transition: background-color 0.2s ease-in-out;
+  }
+
+  .btn-details:hover {
+    background-color: var(--color-celeste-caminantes); /* bg-gray-300 */
+  }
+}

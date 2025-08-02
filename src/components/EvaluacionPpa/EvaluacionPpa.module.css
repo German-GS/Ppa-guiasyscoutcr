@@ -1,0 +1,103 @@
+/* src/components/EvaluacionPpa/EvaluacionPpa.module.css */
+
+.evaluationContainer {
+  background-color: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--color-gray-200);
+}
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--color-scout);
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: var(--color-gray-50);
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-gray-200);
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-morado-principal); /* <-- Corrige el label blanco */
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--color-gray-200);
+  padding-bottom: 0.5rem;
+}
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.activityItem {
+  background-color: white;
+  border: 1px solid var(--color-gray-200);
+  padding: 1rem;
+  border-radius: 0.5rem;
+}
+
+.activityDescription {
+  font-weight: 600;
+  color: var(--color-gray-800);
+  margin-bottom: 0.75rem;
+}
+
+.statusButtons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.statusButton {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.statusButton.active {
+  font-weight: 700;
+  transform: scale(1.05);
+}
+
+.logrado {
+  background-color: #dcfce7; /* green-100 */
+  color: #166534; /* green-800 */
+  border-color: #dcfce7;
+}
+.logrado.active {
+  background-color: #22c55e; /* green-500 */
+  color: white;
+  border-color: #16a34a;
+}
+
+.noLogrado {
+  background-color: #fee2e2; /* red-100 */
+  color: #991b1b; /* red-800 */
+  border-color: #fee2e2;
+}
+.noLogrado.active {
+  background-color: #ef4444; /* red-500 */
+  color: white;
+  border-color: #dc2626;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}

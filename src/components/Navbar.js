@@ -3,9 +3,8 @@ import { useAuth } from "../context/authContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router-dom";
-import "../App.css";
+import "../index.css";
 import { NotificacionesProtagonista } from "./NotificacionesProtagonista";
-
 
 export function Navbar({ fixed }) {
   const [navbarOpen, setNavbarOpen] = useState(false);
@@ -75,7 +74,9 @@ export function Navbar({ fixed }) {
           </button>
         </div>
         <div
-          className={`lg:flex flex-grow items-center ${navbarOpen ? "flex" : "hidden"}`}
+          className={`lg:flex flex-grow items-center ${
+            navbarOpen ? "flex" : "hidden"
+          }`}
           id="example-navbar-danger"
         >
           <ul className="flex flex-col lg:flex-row list-none lg:ml-auto">

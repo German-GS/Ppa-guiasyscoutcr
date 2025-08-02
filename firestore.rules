@@ -2,76 +2,71 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Reglas para /users/{userId}
+    // --- Funciones de Ayuda ---
+    function isOwner(docData) {
+      return request.auth != null && request.auth.uid == docData.userId;
+    }
+   function isConsejeroFor(protagonistaId) {
+  return request.auth != null &&
+         exists(/databases/$(database)/documents/consejeros/$(request.auth.uid)/protagonistas/$(protagonistaId));
+}
+    // ▼▼▼ FUNCIÓN CORREGIDA ▼▼▼
+    function isConsejero() {
+        // Usamos .lower() para hacer la comparación insensible a mayúsculas/minúsculas
+        return request.auth != null &&
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol.lower() == 'consejero';
+    }
+
+    // --- Reglas para /users/{userId} ---
     match /users/{userId} {
-      allow get, list: if request.auth != null;
-
-      allow create: if request.auth != null && request.auth.uid == userId;
-
-      allow update: if (
-        // Protagonista actualizando primerInicioSesion o ultimoInicio
-        (request.auth != null &&
-         request.auth.uid == userId &&
-         request.resource.data.diff(resource.data).changedKeys().hasOnly(["primerInicioSesion", "ultimoInicio"]))
-
-        || 
-
-        // Consejero actualizando datos del protagonista que tiene asignado
-        (
-          request.auth != null &&
-          exists(/databases/$(database)/documents/consejeros/$(request.auth.uid)/protagonistas/$(userId)) &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "etapas", "campamento1", "campamento2", "campamento3", "rol", "updatedAt"
-          ])
-        )
-      );
+  allow get: if request.auth.uid == userId || isConsejeroFor(userId);
+      // PERMISO ESPECIAL: Permitir que un consejero pueda listar/buscar usuarios.
+      allow list: if isConsejero();
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId || isConsejeroFor(userId);
     }
 
-    // Reglas para notificaciones generales
+    // --- Reglas para /notificaciones/{userId} ---
     match /notificaciones/{userId} {
-      allow read, write, update, delete: if request.auth != null;
+      // PERMISO ESPECIAL: Permitir que un consejero pueda escribir (crear) una notificación.
+      allow write: if request.auth.uid == userId || isConsejero();
+      allow read: if request.auth.uid == userId;
+
+      match /invitaciones/{invitacionId} {
+        // Un consejero puede crear la invitación.
+        allow create: if isConsejero();
+        // El protagonista puede leer y actualizar sus invitaciones.
+        allow read, update: if request.auth.uid == userId;
+      }
     }
 
-    match /notificaciones/{userId}/invitaciones/{invitacionId} {
-      allow read, write, update, delete, list: if request.auth != null;
-
-      allow update: if request.auth.uid == userId &&
-        request.resource.data.diff(resource.data).changedKeys().hasOnly(["estado"]) &&
-        request.resource.data.estado in ["aceptado", "rechazado"];
-    }
-
-    // Reglas para consejeros y subcolecciones
+    // --- Reglas para /consejeros/{consejeroId} (se mantienen seguras) ---
     match /consejeros/{consejeroId} {
-      allow create, read, write: if request.auth != null && request.auth.uid == consejeroId;
-
+      allow read, write: if request.auth.uid == consejeroId;
       match /protagonistas/{protaId} {
-        allow create: if request.auth != null && (
-          request.auth.uid == consejeroId ||  // consejero crea vínculo
-          request.auth.uid == protaId         // protagonista acepta invitación
-        );
-
-        allow read, write: if request.auth != null && request.auth.uid == consejeroId;
+        allow create: if request.auth.uid == consejeroId || request.auth.uid == protaId;
+        allow read, delete: if request.auth.uid == consejeroId;
       }
-
       match /asistencias/{fecha} {
-        allow read, write: if request.auth != null && request.auth.uid == consejeroId;
+        allow read, write: if request.auth.uid == consejeroId;
       }
     }
-
-    // Reglas para PPA
-    match /PPA/{ppaId} {
-      allow read: if request.auth != null &&
-        (
-          request.auth.uid == resource.data.userId ||
-          exists(/databases/$(database)/documents/consejeros/$(request.auth.uid)/protagonistas/$(resource.data.userId))
-        );
-
-      allow write: if request.auth != null &&
-        (
-          request.auth.uid == request.resource.data.userId ||
-          exists(/databases/$(database)/documents/consejeros/$(request.auth.uid)/protagonistas/$(request.resource.data.userId))
-        );
+    
+     match /comunidades/{comunidadId} {
+      // Un consejero puede leer y escribir en el documento de su propia comunidad.
+      // El ID del documento debe ser igual al ID del consejero.
+      allow read, write: if request.auth.uid == comunidadId && isConsejero();
     }
 
+    // --- Reglas para /PPA/{ppaId} (se mantienen seguras) ---
+    match /PPA/{ppaId} {
+  // Unificamos get y list en una sola regla 'read'.
+  // Permite la lectura si eres el dueño O el consejero asignado.
+  allow read: if isOwner(resource.data) || isConsejeroFor(resource.data.userId);
+
+  // Las reglas de escritura se mantienen igual (solo el dueño puede modificar).
+  allow create: if isOwner(request.resource.data);
+  allow update, delete: if isOwner(resource.data);
+}
   }
 }
