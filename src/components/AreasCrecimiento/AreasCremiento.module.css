@@ -259,7 +259,25 @@
   box-shadow: 0 0 0 1px var(--color-morado-principal);
 }
 
-/* ▼▼▼ AÑADE ESTO AL FINAL DE TU ARCHIVO CSS ▼▼▼ */
+/* Estilos para el contenedor de la pregunta cuando la respuesta es SÍ */
+.questionContainer.answeredSi {
+  background-color: #f0fdf4; /* Tailwind green-50 */
+  border-color: #22c55e; /* Tailwind green-500 */
+}
+
+.questionContainer.answeredSi .questionButton {
+  background-color: #f0fdf4; /* Tailwind green-50 */
+}
+
+/* Estilos para el contenedor de la pregunta cuando la respuesta es NO */
+.questionContainer.answeredNo {
+  background-color: #fef2f2; /* Tailwind red-50 */
+  border-color: #ef4444; /* Tailwind red-500 */
+}
+
+.questionContainer.answeredNo .questionButton {
+  background-color: #fef2f2; /* Tailwind red-50 */
+}
 
 /* Estilos para tablets y celulares (pantallas de hasta 768px de ancho) */
 @media (max-width: 768px) {

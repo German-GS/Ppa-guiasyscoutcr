@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { onGetPpas } from "../../firebase";
+// ▼▼▼ 1. IMPORTAR deletePpa Y Swal ▼▼▼
+import { onGetPpas, deletePpa } from "../../firebase";
+import Swal from "sweetalert2";
 import Modal from "react-modal";
 import { Ppa } from "../../components/PPA/Ppa";
 import { EvaluacionPpa } from "../EvaluacionPpa/EvaluacionPpa";
@@ -45,6 +47,29 @@ export function ListPpa({ onEditPpa }) {
     );
     return () => unsubscribe?.();
   }, [user?.uid]);
+
+  // ▼▼▼ 2. AÑADIR LA FUNCIÓN PARA MANEJAR LA ELIMINACIÓN ▼▼▼
+  const handleDeletePpa = async (id) => {
+    const result = await Swal.fire({
+      title: "¿Estás seguro?",
+      text: "¡No podrás revertir esta acción!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Sí, ¡elimínalo!",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deletePpa(id);
+        Swal.fire("¡Eliminado!", "El PPA ha sido eliminado.", "success");
+      } catch (error) {
+        Swal.fire("Error", "Ocurrió un error al eliminar el PPA.", "error");
+      }
+    }
+  };
 
   const openViewModal = (ppa) => {
     setSelectedPpa(ppa);
@@ -143,24 +168,28 @@ export function ListPpa({ onEditPpa }) {
                 )}
                 {vencimiento.status === "activo" && (
                   <>
-                    {" "}
                     <button
                       onClick={() => openViewModal(ppa)}
                       className="btn-secondary"
                     >
                       Ver Detalles
-                    </button>{" "}
+                    </button>
                     <button
                       onClick={() => onEditPpa(ppa)}
                       className="btn-primary"
                       style={{ width: "auto", padding: "0.5rem 1rem" }}
                     >
                       Modificar
-                    </button>{" "}
+                    </button>
+                    {/* ▼▼▼ 3. AÑADIR EL BOTÓN DE ELIMINAR AQUÍ ▼▼▼ */}
+                    <button
+                      onClick={() => handleDeletePpa(ppa.id)}
+                      className="bg-red-500 text-white font-semibold py-1 px-4 text-sm rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      Eliminar
+                    </button>
                   </>
                 )}
-
-                {/* ▼▼▼ CAMBIO REALIZADO AQUÍ ▼▼▼ */}
                 {vencimiento.status === "evaluado" && (
                   <button
                     onClick={() => openViewModal(ppa)}

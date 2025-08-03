@@ -12,8 +12,45 @@ import Swal from "sweetalert2";
 import { db } from "../../firebase";
 import { Ppa } from "../PPA/Ppa";
 import { ArrowLeft } from "lucide-react";
+import Modal from "react-modal";
+import { GraficosProtagonista } from "../GraficosProtagonista/GraficosProtagonista";
+
+// --- Funciones de ayuda para fechas ---
+const toJavaScriptDate = (dateValue) => {
+  if (!dateValue) return null;
+  if (typeof dateValue.toDate === "function") return dateValue.toDate();
+  if (dateValue instanceof Date) return dateValue;
+  const d = new Date(dateValue);
+  if (!isNaN(d.getTime())) return d;
+  return null;
+};
+
+const getVencimientoInfo = (ppa) => {
+  if (ppa.estado === "evaluado")
+    return { text: "Evaluado", style: "bg-gray-200 text-gray-800" };
+  const fechaVencimiento = toJavaScriptDate(ppa.fechaDeVigencia);
+  if (!fechaVencimiento)
+    return { text: "Sin Vigencia", style: "bg-gray-200 text-gray-800" };
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  fechaVencimiento.setHours(0, 0, 0, 0);
+  const diffTime = fechaVencimiento.getTime() - hoy.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  if (diffDays < 0)
+    return { text: `Vencido`, style: "bg-red-100 text-red-800" };
+  if (diffDays === 0)
+    return {
+      text: "Vence hoy",
+      style: "bg-yellow-100 text-yellow-800 font-bold",
+    };
+  return {
+    text: `Vence en ${diffDays} días`,
+    style: "bg-green-100 text-green-800",
+  };
+};
 
 export function ExpedienteProtagonista({ protagonista, onVolver }) {
+  // Los hooks como useState deben estar SIEMPRE dentro de la función del componente
   const [formData, setFormData] = useState({
     decision: false,
     decisionFecha: "",
@@ -28,55 +65,38 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
     campamento3: "",
     observaciones: "",
   });
-
   const [datosPerfil, setDatosPerfil] = useState(null);
   const [rolEditado, setRolEditado] = useState("");
   const [ppaList, setPpaList] = useState([]);
   const [selectedPpa, setSelectedPpa] = useState(null);
 
   useEffect(() => {
-    const cargarDatosExtra = async () => {
+    const cargarDatos = async () => {
       if (protagonista?.uid) {
+        // Cargar perfil del usuario
         const docRef = doc(db, "users", protagonista.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setFormData((prev) => ({
-            ...prev,
-            ...(data.etapas || {}),
-          }));
           setDatosPerfil(data);
+          setFormData((prev) => ({ ...prev, ...(data.etapas || {}) }));
           setRolEditado(data.rol || "protagonista");
         }
-      }
-    };
 
-    const cargarPpasDelProtagonista = async () => {
-      const userId = protagonista?.uid || protagonista?.id;
-      if (!userId) {
-        return;
-      }
-
-      try {
-        const q = query(collection(db, "PPA"), where("userId", "==", userId));
+        // Cargar PPAs del usuario
+        const q = query(
+          collection(db, "PPA"),
+          where("userId", "==", protagonista.uid)
+        );
         const snapshot = await getDocs(q);
         const ppas = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
         setPpaList(ppas);
-      } catch (error) {
-        // El error de permisos ya no debería ocurrir, pero es bueno mantener el catch
-        Swal.fire(
-          "Error",
-          "No se pudieron cargar los PPAs del protagonista.",
-          "error"
-        );
       }
     };
-
-    cargarDatosExtra();
-    cargarPpasDelProtagonista();
+    cargarDatos();
   }, [protagonista]);
 
   const handleChange = (e) => {
@@ -93,50 +113,24 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
 
   const guardarCambios = async () => {
     try {
-      if (!protagonista?.uid) {
-        throw new Error("ID de protagonista no definido");
-      }
+      if (!protagonista?.uid) throw new Error("ID de protagonista no definido");
 
       await setDoc(
         doc(db, "users", protagonista.uid),
         {
-          etapas: {
-            ...formData,
-            decisionFecha: formData.decision ? formData.decisionFecha : null,
-            compromisoFecha: formData.compromiso
-              ? formData.compromisoFecha
-              : null,
-          },
-          campamento1: formData.campamento1 || "",
-          campamento2: formData.campamento2 || "",
-          campamento3: formData.campamento3 || "",
+          etapas: formData,
           rol: rolEditado,
-          updatedAt: new Date().toISOString(),
         },
         { merge: true }
       );
 
-      Swal.fire({
-        title: "¡Éxito!",
-        text: "Expediente actualizado correctamente",
-        icon: "success",
-      });
-
-      // Actualiza el estado local para reflejar los cambios guardados
-      setDatosPerfil((prev) => ({
-        ...prev,
-        rol: rolEditado,
-        etapas: { ...formData },
-        campamento1: formData.campamento1 || "",
-        campamento2: formData.campamento2 || "",
-        campamento3: formData.campamento3 || "",
-      }));
+      Swal.fire("¡Éxito!", "Expediente actualizado correctamente", "success");
     } catch (error) {
-      Swal.fire({
-        title: "Error",
-        text: error.message || "Error desconocido al guardar",
-        icon: "error",
-      });
+      Swal.fire(
+        "Error",
+        error.message || "Error desconocido al guardar",
+        "error"
+      );
     }
   };
 
@@ -165,16 +159,18 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
     fecha21.setFullYear(fecha21.getFullYear() + 21);
     const hoy = new Date();
     const diferencia = fecha21.getTime() - hoy.getTime();
-    const mesesRestantes = diferencia / (1000 * 60 * 60 * 24 * 30);
+    const mesesRestantes = diferencia / (1000 * 60 * 60 * 24 * 30.44);
     if (mesesRestantes <= 7 && mesesRestantes > 0) {
       return "Está cercano a remar su propia canoa";
     }
-    return "OK!!";
+    return "En edad Rover";
   };
 
   if (!protagonista || !datosPerfil) {
     return (
-      <div className="text-gray-800">Cargando datos del protagonista...</div>
+      <div className="text-gray-800 text-center p-10">
+        Cargando datos del protagonista...
+      </div>
     );
   }
 
@@ -194,7 +190,10 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
               Ficha editable de progresión personal
             </p>
           </div>
-          <button onClick={onVolver} className="btn-warning">
+          <button
+            onClick={onVolver}
+            className="btn-secondary flex items-center gap-2"
+          >
             <ArrowLeft size={16} /> Volver
           </button>
         </div>
@@ -383,56 +382,94 @@ export function ExpedienteProtagonista({ protagonista, onVolver }) {
         <div className="flex justify-end mt-6">
           <button
             onClick={guardarCambios}
-            className="btn-morado px-4 py-2 rounded-lg text-sm font-medium hover:scale-105 transition shadow"
+            className="btn-primary"
+            style={{ width: "auto", padding: "0.5rem 1rem" }}
           >
             Guardar Cambios
           </button>
         </div>
       </div>
 
-      {ppaList.length > 0 && (
-        <div className="max-w-4xl mx-auto mt-10">
-          <h3 className="text-xl font-bold text-morado-principal mb-4">
-            PPAs registrados por el protagonista
-          </h3>
-          <div className="space-y-4">
-            {ppaList.map((ppa, index) => (
-              <div
-                key={ppa.id}
-                className="p-4 bg-white border rounded-xl shadow-sm flex justify-between items-center"
-              >
-                <div>
-                  <p className="text-sm text-gray-700">
-                    <strong>PPA #{index + 1}</strong> — Creado:{" "}
-                    {ppa.createdAt?.toDate
-                      ? ppa.createdAt.toDate().toLocaleDateString()
-                      : "Sin fecha"}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setSelectedPpa(ppa)}
-                  className="btn-morado px-4 py-2 rounded-lg text-sm font-medium hover:scale-105 transition shadow"
-                >
-                  Ver detalles
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <div>
+        <GraficosProtagonista
+          ppaList={ppaList}
+          evaluacionData={datosPerfil?.brujulaState}
+        />
+      </div>
 
-      {selectedPpa && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white text-gray-800 max-w-5xl w-full rounded-lg shadow-lg relative">
-            <Ppa
-              selectedPpa={selectedPpa}
-              closeModal={() => setSelectedPpa(null)}
-              onEdit={() => {}}
-              mostrarBotonEditar={false}
-            />
+      {/* --- 3. LISTA DE PPAs MEJORADA --- */}
+      <div className="max-w-4xl mx-auto mt-10">
+        <h3 className="text-xl font-bold text-morado-principal mb-4">
+          PPAs registrados por el protagonista
+        </h3>
+        {ppaList.length > 0 ? (
+          <div className="space-y-4">
+            {ppaList.map((ppa, index) => {
+              const vencimiento = getVencimientoInfo(ppa);
+              const fechaCreacion = toJavaScriptDate(ppa.createdAt);
+              const fechaVencimiento = toJavaScriptDate(ppa.fechaDeVigencia);
+              return (
+                <div
+                  key={ppa.id}
+                  className="p-4 bg-white border rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-800">
+                      PPA #{index + 1}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Creado:{" "}
+                      {fechaCreacion
+                        ? fechaCreacion.toLocaleDateString()
+                        : "N/A"}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Vence:{" "}
+                      {fechaVencimiento
+                        ? fechaVencimiento.toLocaleDateString()
+                        : "N/A"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span
+                      className={`px-3 py-1 text-sm font-semibold rounded-full ${vencimiento.style}`}
+                    >
+                      {vencimiento.text}
+                    </span>
+                    <button
+                      onClick={() => setSelectedPpa(ppa)}
+                      className="btn-secondary"
+                    >
+                      Ver detalles
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-gray-500 italic text-center">
+            Este protagonista aún no ha registrado ningún PPA.
+          </p>
+        )}
+      </div>
+
+      {/* Modal para ver PPA (sin cambios) */}
+      <Modal
+        isOpen={!!selectedPpa}
+        onRequestClose={() => setSelectedPpa(null)}
+        contentLabel="Detalles del PPA"
+        className="fixed inset-0 flex items-center justify-center p-4"
+        overlayClassName="fixed inset-0 bg-black bg-opacity-70"
+      >
+        {selectedPpa && (
+          <Ppa
+            selectedPpa={selectedPpa}
+            closeModal={() => setSelectedPpa(null)}
+            mostrarBotonEditar={false}
+          />
+        )}
+      </Modal>
     </>
   );
 }

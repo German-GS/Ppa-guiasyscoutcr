@@ -1,6 +1,6 @@
 // src/components/BrujulaCrecimiento/QuestionItem.js
 import React, { useState } from "react";
-import styles from "./AreasCremiento.module.css";
+import styles from "./AreasCremiento.module.css"; // Asegúrate que el nombre del css sea el correcto
 
 export function QuestionItem({ pregunta, evaluacion, onEvaluacionChange }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -15,9 +15,19 @@ export function QuestionItem({ pregunta, evaluacion, onEvaluacionChange }) {
     onEvaluacionChange({ ...evaluacion, action: e.target.value });
   };
 
+  // --- Lógica para determinar la clase del contenedor ---
+  const containerStyle =
+    evaluacion.answer === "si"
+      ? styles.answeredSi
+      : evaluacion.answer === "no"
+      ? styles.answeredNo
+      : "";
+
   return (
-    <div className={styles.questionContainer}>
+    // ▼▼▼ CAMBIO REALIZADO AQUÍ ▼▼▼
+    <div className={`${styles.questionContainer} ${containerStyle}`}>
       <button
+        type="button"
         onClick={() => setIsExpanded(!isExpanded)}
         className={styles.questionButton}
       >
@@ -33,6 +43,7 @@ export function QuestionItem({ pregunta, evaluacion, onEvaluacionChange }) {
         <div className={styles.evaluationArea}>
           <div className={styles.answerButtons}>
             <button
+              type="button"
               onClick={() => handleAnswer("si")}
               className={`${styles.answerBtn} ${styles.btnSi} ${
                 evaluacion.answer === "si" ? styles.active : ""
@@ -41,6 +52,7 @@ export function QuestionItem({ pregunta, evaluacion, onEvaluacionChange }) {
               Sí
             </button>
             <button
+              type="button"
               onClick={() => handleAnswer("no")}
               className={`${styles.answerBtn} ${styles.btnNo} ${
                 evaluacion.answer === "no" ? styles.active : ""
