@@ -148,4 +148,18 @@
   .btn-details:hover {
     background-color: var(--color-celeste-caminantes); /* bg-gray-300 */
   }
+
+  .btn-morado {
+    background-color: var(--color-morado-principal);
+    color: var(--color-blanco);
+    font-weight: 600; /* font-semibold */
+    font-size: 0.875rem; /* text-sm */
+    padding: 0.25rem 1rem; /* py-1 px-4 */
+    border-radius: 0.5rem; /* rounded-lg */
+    transition: background-color 0.2s ease-in-out;
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-scout); /* bg-gray-300 */
+  }
 }

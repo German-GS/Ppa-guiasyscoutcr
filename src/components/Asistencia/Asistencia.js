@@ -154,7 +154,7 @@ export function Asistencia() {
           <button
             onClick={guardarAsistencia}
             disabled={cargando || protagonistas.length === 0}
-            className={`btn-morado px-6 py-2 rounded-lg font-semibold hover:scale-105 transition ${
+            className={`btn-morado${
               cargando || protagonistas.length === 0
                 ? "opacity-50 cursor-not-allowed"
                 : ""

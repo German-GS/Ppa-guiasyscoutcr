@@ -1,5 +1,4 @@
 // src/components/Agendar/Agendar.js
-
 import React, {
   useState,
   useEffect,
@@ -11,9 +10,20 @@ import {
   faPlus,
   faTrash,
   faCalendarAlt,
+  faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
+import { WandSparkles } from "lucide-react";
+import Swal from "sweetalert2";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../../firebase";
+import { getAuth } from "firebase/auth";
 
-// NUEVO: Definimos las categorías para los menús desplegables.
+// Depuración desactivada para producción
+const DEBUG = false;
+const dbg = (...args) =>
+  DEBUG &&
+  console.log("%c[Agendar]", "color:#7c3aed;font-weight:bold", ...args);
+
 const categorias = {
   Interna: [
     "Actividad de Servicio",
@@ -31,40 +41,44 @@ const categorias = {
   ],
 };
 
+const areasDeCrecimiento = [
+  "corporalidad",
+  "creatividad",
+  "caracter",
+  "afectividad",
+  "sociabilidad",
+  "espiritualidad",
+];
+
 export const Agendar = forwardRef(({ initialData = [] }, ref) => {
-  // NUEVO: La estructura del estado ahora es mucho más rica.
-  const createNewActivity = () => ({
-    id: Date.now(),
-    descripcion: "",
+  const createNewActivity = (desc = "") => ({
+    id: Date.now() + Math.random(),
+    descripcion: desc,
     fechaInicio: "",
     fechaFin: "",
-    tipo: "Interna", // Valor por defecto
-    subtipo: categorias.Interna[0], // Valor por defecto
-    estado: "En Progreso", // 'En Progreso', 'Logrado', 'No Logrado'
+    tipo: "Interna",
+    subtipo: categorias.Interna[0],
+    estado: "En Progreso",
+    areaDeCrecimientoAsociada: "corporalidad",
   });
 
   const [activities, setActivities] = useState([createNewActivity()]);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [generatingId, setGeneratingId] = useState(null);
 
-  // Lógica para cargar datos existentes (ej. al editar un PPA)
   useEffect(() => {
     if (initialLoad && initialData && initialData.length > 0) {
       setActivities(
         initialData.map((item, index) => ({
+          ...createNewActivity(),
+          ...item,
           id: Date.now() + index,
-          descripcion: item.descripcion || "",
-          fechaInicio: item.fechaInicio || "",
-          fechaFin: item.fechaFin || "",
-          tipo: item.tipo || "Interna",
-          subtipo: item.subtipo || categorias.Interna[0],
-          estado: item.estado || "En Progreso",
         }))
       );
       setInitialLoad(false);
     }
   }, [initialData, initialLoad]);
 
-  // NUEVO: `useImperativeHandle` ahora trabaja con la nueva estructura de datos.
   useImperativeHandle(ref, () => ({
     getValues: () =>
       activities.filter((a) => a.descripcion.trim() || a.fechaInicio.trim()),
@@ -89,7 +103,6 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
       prev.map((activity) => {
         if (activity.id === id) {
           const updatedActivity = { ...activity, [name]: value };
-          // Si el tipo cambia, reseteamos el subtipo al primer valor de la nueva categoría
           if (name === "tipo") {
             updatedActivity.subtipo = categorias[value][0];
           }
@@ -101,7 +114,7 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
   };
 
   const handleAddActivity = () => {
-    setActivities([...activities, { ...createNewActivity(), id: Date.now() }]);
+    setActivities([...activities, createNewActivity()]);
   };
 
   const handleRemoveActivity = (id) => {
@@ -110,15 +123,10 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
     }
   };
 
-  // NUEVO: La función del calendario ahora usa fecha de inicio y fin.
   const addToGoogleCalendar = (activity) => {
     if (!activity.descripcion || !activity.fechaInicio) return;
-
-    // Google Calendar necesita fechas en formato YYYYMMDDTHHMMSSZ / YYYYMMDD
-    // Usaremos el formato de día completo.
     const formatDate = (date) => date.replace(/-/g, "");
     const startDate = formatDate(activity.fechaInicio);
-    // Para un evento de día completo, la fecha de fin es el día siguiente.
     let endDate;
     if (activity.fechaFin) {
       const nextDay = new Date(activity.fechaFin);
@@ -127,7 +135,6 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
     } else {
       endDate = startDate;
     }
-
     const params = new URLSearchParams({
       action: "TEMPLATE",
       text: `PPA: ${activity.descripcion}`,
@@ -136,46 +143,94 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
       sf: true,
       output: "xml",
     });
-
     window.open(
       `https://calendar.google.com/calendar/render?${params.toString()}`,
       "_blank"
     );
   };
 
+  const handleGenerateSubtasks = async (activityId, description) => {
+    const cleanObjective = (description || "").trim();
+
+    if (generatingId) return;
+    if (!cleanObjective) {
+      Swal.fire(
+        "Atención",
+        "Escribe una descripción antes de pedir sugerencias.",
+        "info"
+      );
+      return;
+    }
+
+    setGeneratingId(activityId);
+    try {
+      const callable = httpsCallable(functions, "suggestSubtasks", {
+        timeout: 30000,
+      });
+
+      const result = await callable({ objective: cleanObjective });
+      const subtasks = result?.data?.subtasks;
+
+      if (!Array.isArray(subtasks)) {
+        throw new Error("La respuesta de la IA no tuvo un formato válido.");
+      }
+
+      const newSubtasks = subtasks.map((subtaskDesc) =>
+        createNewActivity(subtaskDesc)
+      );
+      const originalIndex = activities.findIndex(
+        (act) => act.id === activityId
+      );
+      if (originalIndex !== -1) {
+        const newActivities = [...activities];
+        newActivities.splice(originalIndex + 1, 0, ...newSubtasks);
+        setActivities(newActivities);
+      }
+    } catch (error) {
+      console.error("Error al generar subtareas:", error);
+      Swal.fire(
+        "Error",
+        `Hubo un problema al contactar a la IA. Inténtalo de nuevo. (${
+          error?.code || "desconocido"
+        })`,
+        "error"
+      );
+    } finally {
+      setGeneratingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* NUEVO: Encabezados para la nueva tabla de actividades */}
       <div className="hidden lg:grid lg:grid-cols-12 gap-4 items-center px-2">
-        <div className="lg:col-span-4">
+        <div className="lg:col-span-3">
           <label className="text-sm font-medium text-gray-600">
-            Descripción de la Actividad
+            Descripción
           </label>
         </div>
         <div className="lg:col-span-2">
-          <label className="text-sm font-medium text-gray-600">
-            Fechas (Inicio/Fin)
-          </label>
+          <label className="text-sm font-medium text-gray-600">Fechas</label>
         </div>
         <div className="lg:col-span-2">
           <label className="text-sm font-medium text-gray-600">Tipo</label>
         </div>
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-2">
           <label className="text-sm font-medium text-gray-600">Categoría</label>
+        </div>
+        <div className="lg:col-span-2">
+          <label className="text-sm font-medium text-gray-600">
+            Área Asociada
+          </label>
         </div>
         <div className="lg:col-span-1"></div>
       </div>
 
-      {activities.map((activity, index) => (
+      {activities.map((activity) => (
         <div
           key={activity.id}
           className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start p-4 border rounded-lg bg-gray-50 shadow-sm"
         >
-          {/* Descripción */}
-          <div className="lg:col-span-4">
-            <label className="text-sm font-semibold text-gray-700 lg:hidden mb-1 block">
-              Descripción
-            </label>
+          <div className="lg:col-span-3">
             <input
               type="text"
               name="descripcion"
@@ -185,40 +240,23 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
               placeholder="Ej: Campaña de reforestación"
             />
           </div>
-
-          {/* Fechas */}
           <div className="lg:col-span-2 grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-sm font-semibold text-gray-700 lg:hidden mb-1 block">
-                Inicio
-              </label>
-              <input
-                type="date"
-                name="fechaInicio"
-                value={activity.fechaInicio}
-                onChange={(e) => handleInputChange(activity.id, e)}
-                className="border-input"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-semibold text-gray-700 lg:hidden mb-1 block">
-                Fin
-              </label>
-              <input
-                type="date"
-                name="fechaFin"
-                value={activity.fechaFin}
-                onChange={(e) => handleInputChange(activity.id, e)}
-                className="border-input"
-              />
-            </div>
+            <input
+              type="date"
+              name="fechaInicio"
+              value={activity.fechaInicio}
+              onChange={(e) => handleInputChange(activity.id, e)}
+              className="border-input"
+            />
+            <input
+              type="date"
+              name="fechaFin"
+              value={activity.fechaFin}
+              onChange={(e) => handleInputChange(activity.id, e)}
+              className="border-input"
+            />
           </div>
-
-          {/* Tipo */}
           <div className="lg:col-span-2">
-            <label className="text-sm font-semibold text-gray-700 lg:hidden mb-1 block">
-              Tipo
-            </label>
             <select
               name="tipo"
               value={activity.tipo}
@@ -229,12 +267,7 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
               <option value="Externa">Externa</option>
             </select>
           </div>
-
-          {/* Categoría (Subtipo) */}
-          <div className="lg:col-span-3">
-            <label className="text-sm font-semibold text-gray-700 lg:hidden mb-1 block">
-              Categoría
-            </label>
+          <div className="lg:col-span-2">
             <select
               name="subtipo"
               value={activity.subtipo}
@@ -248,9 +281,36 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
               ))}
             </select>
           </div>
-
-          {/* Acciones */}
+          <div className="lg:col-span-2">
+            <select
+              name="areaDeCrecimientoAsociada"
+              value={activity.areaDeCrecimientoAsociada}
+              onChange={(e) => handleInputChange(activity.id, e)}
+              className="border-input capitalize"
+            >
+              {areasDeCrecimiento.map((area) => (
+                <option key={area} value={area} className="capitalize">
+                  {area}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="lg:col-span-1 flex items-center justify-end space-x-2 pt-4 lg:pt-0">
+            <button
+              type="button"
+              onClick={() =>
+                handleGenerateSubtasks(activity.id, activity.descripcion)
+              }
+              className="p-2 text-purple-600 hover:text-purple-800 focus:outline-none bg-purple-100 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Sugerir subtareas con IA"
+              disabled={!!generatingId}
+            >
+              {generatingId === activity.id ? (
+                <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+              ) : (
+                <WandSparkles size={16} />
+              )}
+            </button>
             <button
               type="button"
               onClick={() => addToGoogleCalendar(activity)}
