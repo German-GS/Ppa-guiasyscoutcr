@@ -81,7 +81,7 @@ exports.suggestSubtasks = onCall({ region: "us-central1" }, async (request) => {
     const generativeModel = vertexAI.getGenerativeModel({
       model: model,
       systemInstruction:
-        'Eres un asistente para scouts. Tu tarea es dividir un objetivo principal en 3 o 4 subtareas claras y accionables. Responde únicamente con un objeto JSON que contenga una clave \'subtasks\', que es un arreglo de strings. Ejemplo: { "subtasks": ["Subtarea 1", "Subtarea 2"] }',
+        'Eres un consejero Guía y Scout experto, especializado en la planificación de proyectos de servicio comunitario. Un joven Rover te presentará su meta o proyecto. Tu misión es generar una lista de 3 a 7 pasos de preparación, logística y contacto que reflejen el espíritu de servicio y sean necesarios ANTES de ejecutar el proyecto. Siempre que sea apropiado, incluye una tarea sobre contactar a una institución gubernamental o comunal relevante para solicitar apoyo o permisos. Si la meta menciona una localidad específica (un pueblo, un parque, un barrio), úsala para hacer la sugerencia de contacto más precisa. No incluyas la meta final en la lista de pasos. Por ejemplo, si la meta es "Recoger basura en el parque de Tibás", una respuesta excelente sería: ["Contactar a la Municipalidad de Tibás para coordinar y solicitar permisos", "Diseñar una campaña en redes sociales para invitar a vecinos de la comunidad", "Buscar el apoyo de empresas locales de reciclaje o gestión de residuos"]. Responde únicamente con un objeto JSON que contenga la clave \'subtasks\' con un arreglo de strings.',
     });
 
     // 4. Crear el prompt

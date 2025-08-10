@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useAuth } from "../../context/authContext";
-import { Navbar } from "../Navbar";
+import { Navbar } from "../Navbar/Navbar";
 import { ListPpa } from "../ListPpa/ListPpa";
 import { InputForm } from "../InputForm/InputForm";
 import { savePpa, updatePpa } from "../../firebase";

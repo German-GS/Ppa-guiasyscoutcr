@@ -1,18 +1,20 @@
+// src/components/Navbar.js (Actualizado con navegación mejorada)
+
 import { useState } from "react";
-import { useAuth } from "../context/authContext";
+import { useAuth } from "../../context/authContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser } from "@fortawesome/free-solid-svg-icons";
-import { Link } from "react-router-dom";
-import "../index.css";
-import { NotificacionesProtagonista } from "./NotificacionesProtagonista";
+import { Link, useLocation, useNavigate } from "react-router-dom"; // Importa useNavigate
+import "../../index.css";
+import { NotificacionesProtagonista } from "../NotificacionesProtagonista";
 
 export function Navbar({ fixed }) {
   const [navbarOpen, setNavbarOpen] = useState(false);
   const { user, logout } = useAuth();
+  const navigate = useNavigate(); // Hook para navegar
+  const location = useLocation(); // Hook para saber en qué página estamos
 
-  const handleToggleNavbar = () => {
-    setNavbarOpen(!navbarOpen);
-  };
+  const handleToggleNavbar = () => setNavbarOpen(!navbarOpen);
 
   const handleLogOut = async () => {
     try {
@@ -22,18 +24,26 @@ export function Navbar({ fixed }) {
     }
   };
 
-  const scrollToPPAList = (e) => {
-    e.preventDefault();
-    const ppaListSection = document.getElementById("ppa-list");
-    if (ppaListSection) {
-      ppaListSection.scrollIntoView({ behavior: "smooth" });
+  // ▼▼▼ LÓGICA MEJORADA PARA EL SCROLL ▼▼▼
+  const handleMisPpasClick = () => {
+    setNavbarOpen(false); // Cierra el menú en móvil
+    // Si ya estamos en la página de inicio, solo hacemos scroll
+    if (location.pathname === "/home") {
+      const ppaListSection = document.getElementById("ppa-list");
+      if (ppaListSection) {
+        ppaListSection.scrollIntoView({ behavior: "smooth" });
+      }
+    } else {
+      // Si estamos en otra página, navegamos al home
+      // La lógica para el scroll al cargar la página Home se agregará en Home.js
+      navigate("/home", { state: { scrollTo: "ppa-list" } });
     }
-    setNavbarOpen(false); // Cerrar el menú en móvil después de hacer clic
   };
 
   return (
     <nav className="relative flex flex-wrap items-center justify-between px-2 py-3 bg-scout mb-3">
       <div className="container px-4 mx-auto flex flex-wrap items-center justify-between">
+        {/* ... (código del brand y botón de menú sin cambios) ... */}
         <div className="w-full relative flex justify-between lg:w-auto lg:static lg:block lg:justify-start">
           <div className="flex items-center space-x-2">
             {user && user.photoURL ? (
@@ -73,6 +83,7 @@ export function Navbar({ fixed }) {
             </svg>
           </button>
         </div>
+
         <div
           className={`lg:flex flex-grow items-center ${
             navbarOpen ? "flex" : "hidden"
@@ -88,15 +99,27 @@ export function Navbar({ fixed }) {
                 Material de Apoyo
               </Link>
             </li>
+
+            {/* ▼▼▼ ENLACE "MIS PPA'S" CON NUEVA LÓGICA ▼▼▼ */}
             <li className="nav-item">
-              <a
-                href="#ppa-list"
-                onClick={scrollToPPAList}
+              <button
+                onClick={handleMisPpasClick}
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug text-white hover:text-secundaryColor"
               >
                 Mis PPA's
-              </a>
+              </button>
             </li>
+
+            <li className="nav-item">
+              <Link
+                to="/mi-perfil"
+                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug text-white hover:text-secundaryColor"
+                onClick={() => setNavbarOpen(false)}
+              >
+                Mi Perfil
+              </Link>
+            </li>
+
             <li className="nav-item">
               <button
                 onClick={handleLogOut}
@@ -105,9 +128,9 @@ export function Navbar({ fixed }) {
                 Cerrar Sesión
               </button>
             </li>
+
             <li>
               <div className="flex items-center space-x-2">
-                {/* Aquí insertamos la campanita */}
                 <NotificacionesProtagonista />
               </div>
             </li>
