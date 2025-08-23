@@ -25,7 +25,6 @@ exports.vertexDiag = onCall({ region: "us-central1" }, async () => {
     "gemini-1.0-pro-001",
     "gemini-pro",
   ];
-  const functions = require("firebase-functions");
 
   const results = [];
 
@@ -119,3 +118,60 @@ exports.suggestSubtasks = onCall({ region: "us-central1" }, async (request) => {
     );
   }
 });
+
+// functions/index.js (añade esto)
+
+const admin = require("firebase-admin");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+
+try {
+  admin.initializeApp();
+} catch (_) {}
+const db = admin.firestore();
+
+/**
+ * Cierra todas las votaciones vencidas (<= ahora).
+ * No cierra por mayoría: SOLO por tiempo.
+ */
+exports.closeExpiredVotaciones = onSchedule(
+  { schedule: "every 1 minutes", region: "us-central1" },
+  async () => {
+    const now = admin.firestore.Timestamp.now();
+
+    // ciclos en votación cuyo cierraEn ya pasó
+    const qs = await db
+      .collection("ciclos")
+      .where("estado", "==", "en_votacion")
+      .where("votacion.cierraEn", "<=", now)
+      .get();
+
+    if (qs.empty) return null;
+
+    for (const docSnap of qs.docs) {
+      const cicloRef = docSnap.ref;
+      const ciclo = docSnap.data();
+      const requeridos = ciclo?.votacion?.requeridos || 1;
+
+      // Contar votos al cierre (simple)
+      const votosSnap = await cicloRef.collection("votos").get();
+      let aFavor = 0;
+      votosSnap.forEach((v) => {
+        if (v.data()?.valor === true) aFavor++;
+      });
+      const enContra = votosSnap.size - aFavor;
+
+      const aprobado = aFavor >= requeridos;
+
+      await cicloRef.update({
+        estado: aprobado ? "activo" : "rechazado",
+        visible: aprobado, // si aprobó, todos lo ven
+        "votacion.estado": "cerrada",
+        "votacion.aFavor": aFavor,
+        "votacion.enContra": enContra,
+        "votacion.cerradoEn": admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    return null;
+  }
+);

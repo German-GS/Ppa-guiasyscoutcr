@@ -1,10 +1,5 @@
 // src/components/Agendar/Agendar.js
-import React, {
-  useState,
-  useEffect,
-  forwardRef,
-  useImperativeHandle,
-} from "react";
+import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
@@ -16,30 +11,32 @@ import { WandSparkles } from "lucide-react";
 import Swal from "sweetalert2";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../firebase";
-import { getAuth } from "firebase/auth";
 
-// Depuración desactivada para producción
-const DEBUG = false;
-const dbg = (...args) =>
-  DEBUG &&
-  console.log("%c[Agendar]", "color:#7c3aed;font-weight:bold", ...args);
-
-const categorias = {
+// ---- Constantes (sin cambios) ----
+const categoriasCompletas = {
   Interna: [
+    "Reunión Ordinaria",
+    "Reunión de Consejo",
     "Actividad de Servicio",
-    "Campamento/Caminata/Excursión",
-    "Programa Especial (Guía)",
-    "Proyecto Interno",
+    "Proyecto de Comunidad",
     "Otro",
   ],
   Externa: [
-    "Proyecto de Universidad/Estudio",
-    "Trabajo",
-    "Servicio Comunitario (ONGs, etc.)",
-    "Proyecto Personal",
+    "Campamento/Caminata/Excursión",
+    "Actividad de Servicio",
+    "Proyecto de Comunidad",
     "Otro",
   ],
 };
+
+const categoriasSimples = [
+  "Actividad de Servicio",
+  "Campamento/Caminata/Excursión",
+  "Reunión Ordinaria",
+  "Reunión de Consejo",
+  "Proyecto de Comunidad",
+  "Otro",
+];
 
 const areasDeCrecimiento = [
   "corporalidad",
@@ -50,96 +47,113 @@ const areasDeCrecimiento = [
   "espiritualidad",
 ];
 
-export const Agendar = forwardRef(({ initialData = [] }, ref) => {
-  const createNewActivity = (desc = "") => ({
-    id: Date.now() + Math.random(),
-    descripcion: desc,
-    fechaInicio: "",
-    fechaFin: "",
-    tipo: "Interna",
-    subtipo: categorias.Interna[0],
-    estado: "En Progreso",
-    areaDeCrecimientoAsociada: "corporalidad",
-  });
+export const Agendar = ({
+  initialData = [],
+  simple = false,
+  miembros = [],
+  readOnly = false,
+  onUpdate = () => {},
+}) => {
+  const safeMiembros = Array.isArray(miembros) ? miembros : [];
+  const firstMiembro =
+    (typeof safeMiembros[0] === "string"
+      ? safeMiembros[0]
+      : safeMiembros[0]?.nombre) || "";
 
-  const [activities, setActivities] = useState([createNewActivity()]);
-  const [initialLoad, setInitialLoad] = useState(true);
+  const firstDe = (arr) =>
+    Array.isArray(arr) && arr.length > 0 ? arr[0] : categoriasSimples[0];
+
+  const createNewActivity = (desc = "") => {
+    const defaultSubtipo = simple
+      ? firstDe(categoriasSimples)
+      : firstDe(categoriasCompletas?.Interna);
+
+    const newActivity = {
+      id: Date.now() + Math.random(),
+      descripcion: desc,
+      fechaInicio: "",
+      fechaFin: "",
+      estado: "En Progreso",
+      areaDeCrecimientoAsociada: "corporalidad",
+      encargado: firstMiembro,
+      subtipo: defaultSubtipo,
+    };
+    if (!simple) {
+      newActivity.tipo = "Interna";
+    }
+    return newActivity;
+  };
+
+  const [activities, setActivities] = useState([]); // CORRECCIÓN: Iniciar como un array vacío
   const [generatingId, setGeneratingId] = useState(null);
 
+  // Cargar datos iniciales del padre (CicloForm)
   useEffect(() => {
-    if (initialLoad && initialData && initialData.length > 0) {
+    // Si hay datos iniciales, los usamos
+    if (Array.isArray(initialData) && initialData.length > 0) {
       setActivities(
         initialData.map((item, index) => ({
           ...createNewActivity(),
           ...item,
-          id: Date.now() + index,
+          id: item.id || Date.now() + index, // Asegura un ID único para React
         }))
       );
-      setInitialLoad(false);
+    } else {
+      // Si no hay datos, creamos la primera fila por defecto
+      setActivities([createNewActivity()]);
     }
-  }, [initialData, initialLoad]);
+  }, [initialData]);
 
-  useImperativeHandle(ref, () => ({
-    getValues: () =>
-      activities.filter((a) => a.descripcion.trim() || a.fechaInicio.trim()),
-    setValues: (newData) => {
-      if (Array.isArray(newData) && newData.length > 0) {
-        setActivities(
-          newData.map((item, i) => ({
-            ...createNewActivity(),
-            ...item,
-            id: Date.now() + i,
-          }))
-        );
-      } else {
-        setActivities([createNewActivity()]);
-      }
-    },
-  }));
+  const updateActivities = (newActivities) => {
+    // const cleanActivities = newActivities.map(({ id, ...rest }) => rest);
+    setActivities(newActivities);
+    onUpdate(newActivities);
+  };
 
   const handleInputChange = (id, event) => {
     const { name, value } = event.target;
-    setActivities((prev) =>
-      prev.map((activity) => {
-        if (activity.id === id) {
-          const updatedActivity = { ...activity, [name]: value };
-          if (name === "tipo") {
-            updatedActivity.subtipo = categorias[value][0];
-          }
-          return updatedActivity;
-        }
-        return activity;
-      })
-    );
+    const newActivities = activities.map((activity) => {
+      if (activity.id !== id) return activity;
+      const updated = { ...activity, [name]: value };
+
+      // Si no es el modo simple y se cambia el TIPO, actualizamos la CATEGORÍA
+      if (!simple && name === "tipo") {
+        const listado =
+          categoriasCompletas?.[value] || categoriasCompletas?.Interna;
+        updated.subtipo = firstDe(listado);
+      }
+      return updated;
+    });
+    updateActivities(newActivities);
   };
 
   const handleAddActivity = () => {
-    setActivities([...activities, createNewActivity()]);
+    const newActivities = [...activities, createNewActivity()];
+    updateActivities(newActivities);
   };
 
   const handleRemoveActivity = (id) => {
-    if (activities.length > 1) {
-      setActivities((prev) => prev.filter((activity) => activity.id !== id));
-    }
+    if (activities.length <= 1) return; // No permitir borrar la última fila
+    const newActivities = activities.filter((a) => a.id !== id);
+    updateActivities(newActivities);
   };
 
   const addToGoogleCalendar = (activity) => {
     if (!activity.descripcion || !activity.fechaInicio) return;
     const formatDate = (date) => date.replace(/-/g, "");
     const startDate = formatDate(activity.fechaInicio);
-    let endDate;
-    if (activity.fechaFin) {
+    const endDate = (() => {
+      if (!activity.fechaFin) return startDate;
       const nextDay = new Date(activity.fechaFin);
       nextDay.setDate(nextDay.getDate() + 1);
-      endDate = nextDay.toISOString().split("T")[0].replace(/-/g, "");
-    } else {
-      endDate = startDate;
-    }
+      return nextDay.toISOString().split("T")[0].replace(/-/g, "");
+    })();
+
     const params = new URLSearchParams({
       action: "TEMPLATE",
       text: `PPA: ${activity.descripcion}`,
       dates: `${startDate}/${endDate}`,
-      details: `Actividad del Plan de Acción Scout.\nTipo: ${activity.tipo}\nCategoría: ${activity.subtipo}`,
+      details: `Actividad del Plan de Acción Scout.\nCategoría: ${activity.subtipo}`,
       sf: true,
       output: "xml",
     });
@@ -151,7 +165,6 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
 
   const handleGenerateSubtasks = async (activityId, description) => {
     const cleanObjective = (description || "").trim();
-
     if (generatingId) return;
     if (!cleanObjective) {
       Swal.fire(
@@ -167,7 +180,6 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
       const callable = httpsCallable(functions, "suggestSubtasks", {
         timeout: 30000,
       });
-
       const result = await callable({ objective: cleanObjective });
       const subtasks = result?.data?.subtasks;
 
@@ -184,7 +196,8 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
       if (originalIndex !== -1) {
         const newActivities = [...activities];
         newActivities.splice(originalIndex + 1, 0, ...newSubtasks);
-        setActivities(newActivities);
+        // CORRECCIÓN: Usar la función central para notificar al padre
+        updateActivities(newActivities);
       }
     } catch (error) {
       console.error("Error al generar subtareas:", error);
@@ -200,10 +213,12 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
     }
   };
 
+  // Render
   return (
     <div className="space-y-6">
+      {/* Cabecera */}
       <div className="hidden lg:grid lg:grid-cols-12 gap-4 items-center px-2">
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-4">
           <label className="text-sm font-medium text-gray-600">
             Descripción
           </label>
@@ -211,18 +226,22 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
         <div className="lg:col-span-2">
           <label className="text-sm font-medium text-gray-600">Fechas</label>
         </div>
-        <div className="lg:col-span-2">
-          <label className="text-sm font-medium text-gray-600">Tipo</label>
-        </div>
+        {!simple && (
+          <div className="lg:col-span-2">
+            <label className="text-sm font-medium text-gray-600">Tipo</label>
+          </div>
+        )}
         <div className="lg:col-span-2">
           <label className="text-sm font-medium text-gray-600">Categoría</label>
+        </div>
+        <div className="lg:col-span-2">
+          <label className="text-sm font-medium text-gray-600">Encargado</label>
         </div>
         <div className="lg:col-span-2">
           <label className="text-sm font-medium text-gray-600">
             Área Asociada
           </label>
         </div>
-        <div className="lg:col-span-1"></div>
       </div>
 
       {activities.map((activity) => (
@@ -230,7 +249,7 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
           key={activity.id}
           className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start p-4 border rounded-lg bg-gray-50 shadow-sm"
         >
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-4">
             <input
               type="text"
               name="descripcion"
@@ -238,8 +257,10 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
               onChange={(e) => handleInputChange(activity.id, e)}
               className="border-input"
               placeholder="Ej: Campaña de reforestación"
+              disabled={readOnly}
             />
           </div>
+
           <div className="lg:col-span-2 grid grid-cols-2 gap-2">
             <input
               type="date"
@@ -247,6 +268,7 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
               value={activity.fechaInicio}
               onChange={(e) => handleInputChange(activity.id, e)}
               className="border-input"
+              disabled={readOnly}
             />
             <input
               type="date"
@@ -254,39 +276,64 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
               value={activity.fechaFin}
               onChange={(e) => handleInputChange(activity.id, e)}
               className="border-input"
+              disabled={readOnly}
             />
           </div>
-          <div className="lg:col-span-2">
-            <select
-              name="tipo"
-              value={activity.tipo}
-              onChange={(e) => handleInputChange(activity.id, e)}
-              className="border-input"
-            >
-              <option value="Interna">Interna</option>
-              <option value="Externa">Externa</option>
-            </select>
-          </div>
+
+          {!simple && (
+            <div className="lg:col-span-2">
+              <select
+                name="tipo"
+                value={activity.tipo}
+                onChange={(e) => handleInputChange(activity.id, e)}
+                className="border-input"
+                disabled={readOnly}
+              >
+                <option value="Interna">Interna</option>
+                <option value="Externa">Externa</option>
+              </select>
+            </div>
+          )}
+
           <div className="lg:col-span-2">
             <select
               name="subtipo"
               value={activity.subtipo}
               onChange={(e) => handleInputChange(activity.id, e)}
               className="border-input"
+              disabled={readOnly}
             >
-              {categorias[activity.tipo].map((cat) => (
+              {(simple
+                ? categoriasSimples
+                : categoriasCompletas[activity.tipo] ||
+                  categoriasCompletas.Interna
+              ).map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
                 </option>
               ))}
             </select>
           </div>
+
+          <div className="lg:col-span-2">
+            <input
+              type="text"
+              name="encargado"
+              value={activity.encargado}
+              onChange={(e) => handleInputChange(activity.id, e)}
+              className="border-input"
+              placeholder="Nombre del encargado"
+              disabled={readOnly}
+            />
+          </div>
+
           <div className="lg:col-span-2">
             <select
               name="areaDeCrecimientoAsociada"
               value={activity.areaDeCrecimientoAsociada}
               onChange={(e) => handleInputChange(activity.id, e)}
               className="border-input capitalize"
+              disabled={readOnly}
             >
               {areasDeCrecimiento.map((area) => (
                 <option key={area} value={area} className="capitalize">
@@ -295,7 +342,8 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
               ))}
             </select>
           </div>
-          <div className="lg:col-span-1 flex items-center justify-end space-x-2 pt-4 lg:pt-0">
+
+          <div className="flex items-center justify-end space-x-2 pt-4 lg:pt-0 lg:col-span-12 border-t lg:border-t-0 mt-4 lg:mt-0">
             <button
               type="button"
               onClick={() =>
@@ -303,7 +351,7 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
               }
               className="p-2 text-purple-600 hover:text-purple-800 focus:outline-none bg-purple-100 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
               title="Sugerir subtareas con IA"
-              disabled={!!generatingId}
+              disabled={!!generatingId || readOnly}
             >
               {generatingId === activity.id ? (
                 <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
@@ -316,6 +364,7 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
               onClick={() => addToGoogleCalendar(activity)}
               className="p-2 text-blue-600 hover:text-blue-800 focus:outline-none bg-blue-100 rounded-full"
               title="Añadir a Google Calendar"
+              disabled={readOnly}
             >
               <FontAwesomeIcon icon={faCalendarAlt} />
             </button>
@@ -324,6 +373,7 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
               onClick={() => handleRemoveActivity(activity.id)}
               className="p-2 text-red-600 hover:text-red-800 focus:outline-none bg-red-100 rounded-full"
               title="Eliminar Actividad"
+              disabled={readOnly}
             >
               <FontAwesomeIcon icon={faTrash} />
             </button>
@@ -331,17 +381,19 @@ export const Agendar = forwardRef(({ initialData = [] }, ref) => {
         </div>
       ))}
 
-      <div className="mt-6">
-        <button
-          type="button"
-          onClick={handleAddActivity}
-          className="btn-primary"
-          aria-label="Agregar otra actividad"
-        >
-          <FontAwesomeIcon icon={faPlus} className="mr-2" />
-          Agregar Actividad
-        </button>
-      </div>
+      {!readOnly && (
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={handleAddActivity}
+            className="btn-primary"
+            aria-label="Agregar otra actividad"
+          >
+            <FontAwesomeIcon icon={faPlus} className="mr-2" />
+            Agregar Actividad
+          </button>
+        </div>
+      )}
     </div>
   );
-});
+};

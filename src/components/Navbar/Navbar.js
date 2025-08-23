@@ -119,6 +119,15 @@ export function Navbar({ fixed }) {
                 Mi Perfil
               </Link>
             </li>
+            <li className="nav-item">
+              <Link
+                to="/consejo-comunidad"
+                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug text-white hover:text-secundaryColor"
+                onClick={() => setNavbarOpen(false)}
+              >
+                Consejo de Comunidad
+              </Link>
+            </li>
 
             <li className="nav-item">
               <button

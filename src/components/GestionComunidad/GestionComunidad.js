@@ -1,12 +1,20 @@
-// src/components/GestionComunidad.js
+// src/components/GestionComunidad/GestionComunidad.js (Actualizado con edición inline del nombre)
 
 import React, { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { useAuth } from "../../context/authContext";
 import { db } from "../../firebase";
-import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  setDoc,
+  getDoc,
+  writeBatch,
+} from "firebase/firestore";
 import { ProtagonistaCard } from "../ProtagonistaCard/ProtagonistaCard";
 import Swal from "sweetalert2";
+import { Pencil } from "lucide-react"; // ▼▼▼ 1. IMPORTAMOS EL ÍCONO DE LÁPIZ ▼▼▼
 
 const rolesDelConsejo = {
   coordinador: { id: "coordinador", nombre: "Coordinador(a)" },
@@ -19,6 +27,9 @@ const rolesDelConsejo = {
 export function GestionComunidad() {
   const { user } = useAuth();
   const [protagonistas, setProtagonistas] = useState([]);
+  const [nombreComunidad, setNombreComunidad] = useState("");
+  // ▼▼▼ 2. AÑADIMOS ESTADO PARA CONTROLAR EL "MODO EDICIÓN" ▼▼▼
+  const [isEditingName, setIsEditingName] = useState(false);
   const [consejo, setConsejo] = useState({
     coordinador: null,
     secretario: null,
@@ -37,101 +48,101 @@ export function GestionComunidad() {
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setProtagonistas(data);
     };
-    const fetchConsejo = async () => {
+
+    const fetchConsejoYNombre = async () => {
       const comunidadRef = doc(db, "comunidades", user.uid);
       const docSnap = await getDoc(comunidadRef);
-      if (docSnap.exists() && docSnap.data().consejo) {
-        setConsejo(docSnap.data().consejo);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.consejo) setConsejo(data.consejo);
+        if (data.nombreSeccion) {
+          setNombreComunidad(data.nombreSeccion);
+          setIsEditingName(false); // Si ya hay un nombre, no empezamos en modo edición
+        } else {
+          setIsEditingName(true); // Si no hay nombre, forzamos el modo edición
+        }
+      } else {
+        setIsEditingName(true); // Si el documento no existe, forzamos modo edición
       }
     };
-    Promise.all([fetchProtagonistas(), fetchConsejo()]).finally(() =>
+    Promise.all([fetchProtagonistas(), fetchConsejoYNombre()]).finally(() =>
       setLoading(false)
     );
   }, [user]);
 
-  // ▼▼▼ FUNCIÓN onDragEnd COMPLETAMENTE REESCRITA ▼▼▼
   const onDragEnd = (result) => {
+    // ... (Esta función se mantiene sin cambios)
     const { source, destination, draggableId } = result;
     if (!destination) return;
-
     const newConsejoState = { ...consejo };
-
-    // Limpiar el rol de origen si el protagonista venía de un rol
     let sourceRolId = null;
     if (source.droppableId.startsWith("rol-")) {
       sourceRolId = source.droppableId.replace("rol-", "");
       newConsejoState[sourceRolId] = null;
     }
-
-    // Colocar el protagonista en el rol de destino
     if (destination.droppableId.startsWith("rol-")) {
       const destRolId = destination.droppableId.replace("rol-", "");
       const protagonistaMovido = protagonistas.find(
         (p) => p.id === draggableId
       );
       const protagonistaQueEstaba = consejo[destRolId];
-
-      // Poner al nuevo protagonista en el rol de destino
       newConsejoState[destRolId] = protagonistaMovido;
-
-      // Si había alguien en ese rol, moverlo al rol de donde venía el otro
-      // (esto maneja el intercambio o "swap")
       if (protagonistaQueEstaba && sourceRolId) {
         newConsejoState[sourceRolId] = protagonistaQueEstaba;
       }
     }
-
     setConsejo(newConsejoState);
   };
 
   const guardarConsejo = async () => {
-    console.log("1. Botón 'Guardar' presionado. Iniciando guardado...");
-    if (!user) {
-      console.error("Error: No hay usuario autenticado para guardar.");
-      return;
-    }
+    if (!user) return;
+    const batch = writeBatch(db); // Inicializamos el lote de escritura
 
     try {
+      // 1. Preparamos los datos para el documento de la comunidad (como antes)
       const consejoParaGuardar = {};
+      const protagonistasAsignados = new Map();
       for (const rol in consejo) {
         if (consejo[rol]) {
+          const prota = consejo[rol];
           consejoParaGuardar[rol] = {
-            // Usamos uid o id para ser más robustos
-            uid: consejo[rol].uid || consejo[rol].id,
-            nombre: consejo[rol].nombre,
-            email: consejo[rol].email,
+            uid: prota.uid || prota.id,
+            nombre: prota.nombre,
+            email: prota.email,
           };
+          protagonistasAsignados.set(prota.uid || prota.id, rol); // Guardamos el rol de cada prota
         } else {
           consejoParaGuardar[rol] = null;
         }
       }
-
-      console.log("2. Datos preparados para guardar:", consejoParaGuardar);
-
       const comunidadRef = doc(db, "comunidades", user.uid);
-      console.log("3. Apuntando al documento:", comunidadRef.path);
-
-      await setDoc(
+      batch.set(
         comunidadRef,
-        { consejo: consejoParaGuardar },
+        { nombreSeccion: nombreComunidad, consejo: consejoParaGuardar },
         { merge: true }
       );
 
-      console.log("4. ¡Guardado en Firestore exitoso!");
+      // 2. Preparamos la actualización para el perfil de CADA protagonista
+      for (const prota of protagonistas) {
+        const protaId = prota.uid || prota.id;
+        const protaRef = doc(db, "users", protaId);
+        const puesto = protagonistasAsignados.get(protaId) || "miembro"; // Si no está en el consejo, es 'miembro'
+        batch.update(protaRef, { puesto: puesto });
+      }
 
+      // 3. Ejecutamos todas las escrituras a la vez
+      await batch.commit();
+
+      setIsEditingName(false);
       Swal.fire({
         title: "¡Éxito!",
-        text: "La configuración del Consejo ha sido guardada.",
+        text: "La configuración y los perfiles han sido actualizados.",
         icon: "success",
         timer: 2000,
       });
     } catch (error) {
-      console.error("5. Ocurrió un error en el bloque catch:", error);
-      Swal.fire(
-        "Error",
-        "No se pudo guardar la configuración del Consejo.",
-        "error"
-      );
+      console.error("Ocurrió un error al guardar:", error);
+      Swal.fire("Error", "No se pudo guardar la configuración.", "error");
     }
   };
 
@@ -149,6 +160,42 @@ export function GestionComunidad() {
       <h2 className="text-2xl font-bold text-scout-secondary mb-4">
         Gestión del Consejo de la Comunidad
       </h2>
+
+      {/* ▼▼▼ 4. LÓGICA PARA MOSTRAR TÍTULO O INPUT ▼▼▼ */}
+      <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border">
+        {isEditingName ? (
+          <div>
+            <label
+              htmlFor="nombreComunidad"
+              className="block text-sm font-bold text-gray-700 mb-1"
+            >
+              Define el nombre de la Comunidad
+            </label>
+            <input
+              type="text"
+              id="nombreComunidad"
+              name="nombreComunidad"
+              value={nombreComunidad}
+              onChange={(e) => setNombreComunidad(e.target.value)}
+              className="border-input"
+              placeholder="Ej: Comunidad Galahad"
+            />
+          </div>
+        ) : (
+          <div className="flex items-center gap-4">
+            <h3 className="text-2xl font-bold text-morado-principal">
+              {nombreComunidad}
+            </h3>
+            <button
+              onClick={() => setIsEditingName(true)}
+              className="text-gray-500 hover:text-morado-principal transition-colors"
+            >
+              <Pencil size={20} />
+            </button>
+          </div>
+        )}
+      </div>
+
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -178,13 +225,17 @@ export function GestionComunidad() {
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
                           >
-                            <ProtagonistaCard protagonista={consejo[rol.id]} />
+                            {" "}
+                            <ProtagonistaCard
+                              protagonista={consejo[rol.id]}
+                            />{" "}
                           </div>
                         )}
                       </Draggable>
                     ) : (
                       <div className="text-gray-400 text-center py-6">
-                        Arrastra un protagonista aquí
+                        {" "}
+                        Arrastra un protagonista aquí{" "}
                       </div>
                     )}
                     {provided.placeholder}
@@ -216,7 +267,8 @@ export function GestionComunidad() {
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
                         >
-                          <ProtagonistaCard protagonista={prota} />
+                          {" "}
+                          <ProtagonistaCard protagonista={prota} />{" "}
                         </div>
                       )}
                     </Draggable>

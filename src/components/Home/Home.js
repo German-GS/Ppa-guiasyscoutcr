@@ -22,13 +22,13 @@ export function Home() {
   const [durationModalIsOpen, setDurationModalIsOpen] = useState(false);
   const [pendingPpaData, setPendingPpaData] = useState(null);
   const [customDate, setCustomDate] = useState("");
+  const [actividades, setActividades] = useState([]);
 
   const refs = {
     suenos: useRef(),
     retos: useRef(),
     fortalezas: useRef(),
     brujula: useRef(),
-    actividad: useRef(),
   };
 
   const fieldTitles = {
@@ -41,6 +41,10 @@ export function Home() {
     suenos: "Ej: Liderar una expedición scout",
     retos: "Ej: Aprender a hacer nudos avanzados",
     fortalezas: "Ej: Buen trabajo en equipo",
+  };
+
+  const handleActividadesUpdate = (nuevasActividades) => {
+    setActividades(nuevasActividades);
   };
 
   const loadPpaForEditing = async (ppa) => {
@@ -99,12 +103,15 @@ export function Home() {
     const getValuesFromRef = (ref) => {
       return ref.current?.getValues ? ref.current.getValues() : [];
     };
+
+    // CAMBIO 5: Obtenemos las actividades desde el estado, no de la ref
     const ppaDataBase = {
       suenos: getValuesFromRef(refs.suenos),
       retos: getValuesFromRef(refs.retos),
       fortalezas: getValuesFromRef(refs.fortalezas),
-      actividad: getValuesFromRef(refs.actividad),
+      actividad: actividades, // <-- Usamos el estado
     };
+
     const brujulaObjectives = getValuesFromRef(refs.brujula);
     const finalPpaData = {
       ...ppaDataBase,
@@ -210,10 +217,12 @@ export function Home() {
     refs.suenos.current?.setInputs([]);
     refs.retos.current?.setInputs([]);
     refs.fortalezas.current?.setInputs([]);
-    refs.actividad.current?.setValues([]);
+
+    // CAMBIO 6: Reseteamos el estado en lugar de la ref
+    setActividades([]);
+
     refs.brujula.current?.reset();
   };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -271,7 +280,10 @@ export function Home() {
             <h2 className="text-2xl font-bold text-scout mb-4">
               Mi Plan de Acción
             </h2>
-            <Agendar ref={refs.actividad} initialData={[]} />
+            <Agendar
+              initialData={actividades}
+              onUpdate={handleActividadesUpdate}
+            />
           </div>
           <div className="flex flex-col md:flex-row justify-center items-center gap-4 mt-8">
             <button

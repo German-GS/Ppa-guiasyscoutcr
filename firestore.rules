@@ -1,72 +1,136 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Funciones de Ayuda ---
-    function isOwner(docData) {
-      return request.auth != null && request.auth.uid == docData.userId;
-    }
-   function isConsejeroFor(protagonistaId) {
-  return request.auth != null &&
-         exists(/databases/$(database)/documents/consejeros/$(request.auth.uid)/protagonistas/$(protagonistaId));
-}
-    // ▼▼▼ FUNCIÓN CORREGIDA ▼▼▼
+    function isAuth()      { return request.auth != null; }
+    function isOwner(d)    { return isAuth() && request.auth.uid == d.userId; }
     function isConsejero() {
-        // Usamos .lower() para hacer la comparación insensible a mayúsculas/minúsculas
-        return request.auth != null &&
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol.lower() == 'consejero';
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid))
+          .data.rol.lower() == 'consejero';
     }
 
-    // --- Reglas para /users/{userId} ---
+    // USERS: el consejero puede leer el perfil de SUS protagonistas
     match /users/{userId} {
-  allow get: if request.auth.uid == userId || isConsejeroFor(userId);
-      // PERMISO ESPECIAL: Permitir que un consejero pueda listar/buscar usuarios.
-      allow list: if isConsejero();
-      allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId || isConsejeroFor(userId);
-    }
+  // Leer: propio doc, o consejero leyendo docs con rol=Protagonista
+  allow read: if request.auth != null && (
+    request.auth.uid == userId ||
+    (
+      // consejero leyendo perfiles de protagonistas
+      get(/databases/$(database)/documents/users/$(request.auth.uid))
+        .data.rol.lower() == 'consejero' &&
+      resource.data.rol != null &&
+      resource.data.rol.lower() == 'protagonista'
+    )
+  );
 
-    // --- Reglas para /notificaciones/{userId} ---
-    match /notificaciones/{userId} {
-      // PERMISO ESPECIAL: Permitir que un consejero pueda escribir (crear) una notificación.
-      allow write: if request.auth.uid == userId || isConsejero();
-      allow read: if request.auth.uid == userId;
+  // Crear / actualizar: solo el dueño de ese user doc
+  allow create, update: if request.auth != null && request.auth.uid == userId;
 
-      match /invitaciones/{invitacionId} {
-        // Un consejero puede crear la invitación.
-        allow create: if isConsejero();
-        // El protagonista puede leer y actualizar sus invitaciones.
-        allow read, update: if request.auth.uid == userId;
-      }
-    }
-
-    // --- Reglas para /consejeros/{consejeroId} (se mantienen seguras) ---
-    match /consejeros/{consejeroId} {
-      allow read, write: if request.auth.uid == consejeroId;
-      match /protagonistas/{protaId} {
-        allow create: if request.auth.uid == consejeroId || request.auth.uid == protaId;
-        allow read, delete: if request.auth.uid == consejeroId;
-      }
-      match /asistencias/{fecha} {
-        allow read, write: if request.auth.uid == consejeroId;
-      }
-    }
-    
-     match /comunidades/{comunidadId} {
-      // Un consejero puede leer y escribir en el documento de su propia comunidad.
-      // El ID del documento debe ser igual al ID del consejero.
-      allow read, write: if request.auth.uid == comunidadId && isConsejero();
-    }
-
-    // --- Reglas para /PPA/{ppaId} (se mantienen seguras) ---
-    match /PPA/{ppaId} {
-  // Unificamos get y list en una sola regla 'read'.
-  // Permite la lectura si eres el dueño O el consejero asignado.
-  allow read: if isOwner(resource.data) || isConsejeroFor(resource.data.userId);
-
-  // Las reglas de escritura se mantienen igual (solo el dueño puede modificar).
-  allow create: if isOwner(request.resource.data);
-  allow update, delete: if isOwner(resource.data);
+  // No abras list globalmente; la condición de arriba se evalúa por documento
 }
+
+    // CONSEJEROS + SUBCOLECCIONES
+    match /consejeros/{consejeroId} {
+      allow read: if isAuth();
+      allow write: if isAuth() && request.auth.uid == consejeroId;
+
+      match /protagonistas/{protaId} {
+        allow read: if isAuth();
+        // crear por el consejero o por el propio protagonista (solo sobre sí)
+        allow create: if isAuth() && (
+          request.auth.uid == consejeroId ||
+          (request.auth.uid == protaId && request.resource.data.uid == protaId)
+        );
+        allow update, delete: if isAuth() && request.auth.uid == consejeroId;
+      }
+
+      match /asistencias/{fecha} {
+        allow read, write: if isAuth() && request.auth.uid == consejeroId;
+      }
+    }
+
+    // Lecturas CG para 'protagonistas' (si usas collectionGroup en otras vistas)
+    match /{path=**}/protagonistas/{anyId} {
+      allow read: if isAuth();
+    }
+
+    // COMUNIDADES
+    match /comunidades/{comunidadId} {
+      allow read: if isAuth();
+      allow write: if isConsejero();
+    }
+
+    // PPA: permitir lectura al consejero del protagonista
+    match /PPA/{ppaId} {
+      allow read: if isOwner(resource.data) ||
+                   (isConsejero() &&
+                     exists(/databases/$(database)/documents/consejeros/$(request.auth.uid)/protagonistas/$(resource.data.userId)));
+      allow create: if isOwner(request.resource.data);
+      allow update, delete: if isOwner(resource.data);
+    }
+
+    // NOTIFICACIONES + INVITACIONES (dejamos como ya lo tienes)
+    match /notificaciones/{userId} {
+   // leer/actualizar: el dueño de la bandeja
+  allow read, list, update: if request.auth != null && request.auth.uid == userId;
+
+  // crear: consejero O el creador expresamente identificado en el payload
+  allow create: if request.auth != null &&
+                ( isConsejero() || request.resource.data.creadorId == request.auth.uid );
+
+  allow delete: if request.auth != null &&
+                ( request.auth.uid == userId || isConsejero() );
+  match /invitaciones/{notifId} {
+    // leer/actualizar por el dueño
+    allow read, list, update: if request.auth != null && request.auth.uid == userId;
+
+    // crear: consejero o secretario que conste como creadorId en el documento
+    allow create: if isConsejero() ||
+      (request.auth != null &&
+       request.resource.data.tipo == 'votacion_ciclo' &&
+       request.resource.data.creadorId == request.auth.uid);
+       
+    // opcional: permitir borrar al dueño o a quien creó
+    allow delete: if request.auth != null &&
+      (request.auth.uid == userId ||
+       request.resource.data.creadorId == request.auth.uid);
+  }
+}
+    match /ciclos/{cicloId} {
+      // Todos leen
+      allow read: if request.auth != null;
+
+      // Crear: solo secretario del ciclo
+      allow create: if request.auth != null &&
+        request.resource.data.secretarioId == request.auth.uid;
+
+      // --- CORRECCIÓN AQUÍ ---
+      // Editar: permitir guardar borrador Y enviar a votación
+      allow update: if request.auth != null &&
+        resource.data.secretarioId == request.auth.uid &&
+        resource.data.estado == 'borrador' &&
+        (request.resource.data.estado == 'borrador' || request.resource.data.estado == 'en_votacion');
+
+      // No borrar desde cliente
+      allow delete: if false;
+
+      // Subcolección de votos (sin cambios)
+      match /votos/{uid} {
+        allow read: if request.auth != null;
+        allow create, update: if request.auth != null &&
+          request.auth.uid == uid &&
+          get(/databases/$(database)/documents/ciclos/$(cicloId)).data.votacion.estado == 'en_votacion' &&
+          request.time <= get(/databases/$(database)/documents/ciclos/$(cicloId)).data.votacion.cierraEn;
+      }
+    }
+    // Si sigues usando colec. raíz 'invitaciones'
+    match /invitaciones/{invitacionId} {
+      allow create: if isConsejero();
+      allow read, update: if isAuth() && (
+        resource.data.creadorId == request.auth.uid ||
+        resource.data.destinatarioId == request.auth.uid
+      );
+      allow list: if isAuth();
+    }
   }
 }

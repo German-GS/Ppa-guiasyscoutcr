@@ -9,6 +9,7 @@ import { AdminSeccion } from "./components/AdmiSeccion/AdmiSeccion";
 import { CompletarPerfil } from "./components/CompletarPerfil.js";
 import { EditarPerfil } from "./components/EditarPerfil/EditarPerfil";
 import { MiPerfilCompleto } from "./components/MiPerfilCompleto/MiPerfilCompleto";
+import { ConsejoComunidad } from "./components/ConsejoComunidad/ConsejoComunidad";
 import { FlujoLogin } from "./components/FlujoLogin.js";
 
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -53,6 +54,14 @@ function App() {
             element={
               <ProtectedRout>
                 <MiPerfilCompleto />
+              </ProtectedRout>
+            }
+          />
+          <Route
+            path="/consejo-comunidad"
+            element={
+              <ProtectedRout>
+                <ConsejoComunidad />
               </ProtectedRout>
             }
           />

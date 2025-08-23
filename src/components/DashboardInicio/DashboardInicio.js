@@ -3,7 +3,15 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/authContext";
 import { db } from "../../firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 import {
   Users,
   AlertTriangle,
@@ -37,65 +45,64 @@ export function DashboardInicio({ onNavigate }) {
   const [alertasPpa, setAlertasPpa] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  function chunk(arr, size) {
+    const out = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  }
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!user?.uid) return;
-
       try {
+        // 1) Lee protagonistas de este consejero (IDs = UIDs)
         const protagonistasRef = collection(
           db,
           `consejeros/${user.uid}/protagonistas`
         );
         const protagonistasSnap = await getDocs(protagonistasRef);
-        const protagonistasEmails = protagonistasSnap.docs.map(
-          (doc) => doc.data().email
-        );
+        const protagonistasUids = protagonistasSnap.docs.map((d) => d.id);
 
-        if (protagonistasEmails.length === 0) {
+        if (protagonistasUids.length === 0) {
+          setStats({
+            totalProtagonistas: 0,
+            enDecision: 0,
+            enCompromiso: 0,
+            conInsignia: 0,
+            conConfirmacion: 0,
+            proximosARemar: 0,
+          });
+          setAlertasPpa([]);
           setLoading(false);
           return;
         }
 
-        const usersQuery = query(
-          collection(db, "users"),
-          where("email", "in", protagonistasEmails)
+        // 2) Trae perfiles de /users por UID (permiso: ahora permitido)
+        const userDocs = await Promise.all(
+          protagonistasUids.map((uid) => getDoc(doc(db, "users", uid)))
         );
-        const usersSnap = await getDocs(usersQuery);
-        const protagonistasData = usersSnap.docs.map((doc) => ({
-          uid: doc.id,
-          ...doc.data(),
-        }));
+        const protagonistasData = userDocs
+          .filter((s) => s.exists())
+          .map((s) => ({ uid: s.id, ...s.data() }));
 
+        // 3) Calcula estadísticas (igual que antes)
         let enDecision = 0,
           enCompromiso = 0,
           conInsignia = 0,
           conConfirmacion = 0,
           proximosARemar = 0;
-
-        // ▼▼▼ LÓGICA DE CONTEO CORREGIDA ▼▼▼
         protagonistasData.forEach((prota) => {
-          // Si está en Compromiso, se cuenta ahí y no en Decisión.
-          if (prota.etapas?.compromiso) {
-            enCompromiso++;
-          }
-          // Si no, se verifica si está en Decisión.
-          else if (prota.etapas?.decision) {
-            enDecision++;
-          }
-
-          // Estos son hitos separados y se pueden contar independientemente.
+          if (prota.etapas?.compromiso) enCompromiso++;
+          else if (prota.etapas?.decision) enDecision++;
           if (prota.etapas?.insigniaServicio) conInsignia++;
           if (prota.etapas?.confirmacion) conConfirmacion++;
 
           if (prota.fechaNacimiento) {
             const fecha21 = new Date(prota.fechaNacimiento);
             fecha21.setFullYear(fecha21.getFullYear() + 21);
-            const mesesRestantes =
-              (fecha21.getTime() - new Date().getTime()) /
-              (1000 * 60 * 60 * 24 * 30.44);
-            if (mesesRestantes <= 7 && mesesRestantes > 0) {
-              proximosARemar++;
-            }
+            const meses =
+              (fecha21 - new Date()) / (1000 * 60 * 60 * 24 * 30.44);
+            if (meses <= 7 && meses > 0) proximosARemar++;
           }
         });
 
@@ -108,62 +115,62 @@ export function DashboardInicio({ onNavigate }) {
           proximosARemar,
         });
 
-        // ▼▼▼ CONSULTA DE PPAs CORREGIDA ▼▼▼
-        // Ahora buscamos explícitamente los PPAs con estado 'activo'.
-        const protagonistasUids = protagonistasData.map((p) => p.uid);
-        const ppaQuery = query(
-          collection(db, "PPA"),
-          where("userId", "in", protagonistasUids),
-          where("estado", "==", "activo")
+        // 4) PPA por lotes de <=10 userIds (permiso: ahora permitido)
+        const lotes = chunk(
+          protagonistasData.map((p) => p.uid),
+          10
         );
-        const ppaSnap = await getDocs(ppaQuery);
+        const ppaDocs = [];
+        for (const lote of lotes) {
+          const qPpa = query(
+            collection(db, "PPA"),
+            where("userId", "in", lote),
+            where("estado", "==", "activo")
+          );
+          const snap = await getDocs(qPpa);
+          ppaDocs.push(...snap.docs);
+        }
 
         const nuevasAlertas = [];
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
 
-        ppaSnap.forEach((doc) => {
-          const ppa = doc.data();
+        ppaDocs.forEach((docu) => {
+          const ppa = docu.data();
           const prota = protagonistasData.find((p) => p.uid === ppa.userId);
-          const fechaVigencia = ppa.fechaDeVigencia?.toDate();
-
-          if (prota && fechaVigencia) {
-            fechaVigencia.setHours(0, 0, 0, 0);
-            const diffTime = fechaVigencia.getTime() - hoy.getTime();
-            const dias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            let mensaje = "",
-              nivel = -1;
-
-            if (dias < 0) {
-              mensaje = `El PPA de ${
-                prota.nombre || "un protagonista"
-              } está vencido por ${Math.abs(dias)} días.`;
-              nivel = 0;
-            } else if (dias <= 14) {
-              mensaje = `El PPA de ${
-                prota.nombre || "un protagonista"
-              } vence en ${dias} días.`;
-              nivel = 1;
-            } else if (dias <= 31) {
-              mensaje = `El PPA de ${
-                prota.nombre || "un protagonista"
-              } vence en aprox. ${Math.round(dias / 7)} semanas.`;
-              nivel = 2;
-            } else if (dias <= 62) {
-              mensaje = `El PPA de ${
-                prota.nombre || "un protagonista"
-              } vence en menos de 2 meses.`;
-              nivel = 3;
-            }
-
-            if (mensaje) nuevasAlertas.push({ id: doc.id, mensaje, nivel });
+          const fechaVig = ppa.fechaDeVigencia?.toDate?.();
+          if (!prota || !fechaVig) return;
+          fechaVig.setHours(0, 0, 0, 0);
+          const dias = Math.ceil((fechaVig - hoy) / (1000 * 60 * 60 * 24));
+          let mensaje = "",
+            nivel = -1;
+          if (dias < 0) {
+            mensaje = `El PPA de ${
+              prota.nombre || "un protagonista"
+            } está vencido por ${Math.abs(dias)} días.`;
+            nivel = 0;
+          } else if (dias <= 14) {
+            mensaje = `El PPA de ${
+              prota.nombre || "un protagonista"
+            } vence en ${dias} días.`;
+            nivel = 1;
+          } else if (dias <= 31) {
+            mensaje = `El PPA de ${
+              prota.nombre || "un protagonista"
+            } vence en aprox. ${Math.round(dias / 7)} semanas.`;
+            nivel = 2;
+          } else if (dias <= 62) {
+            mensaje = `El PPA de ${
+              prota.nombre || "un protagonista"
+            } vence en menos de 2 meses.`;
+            nivel = 3;
           }
+          if (mensaje) nuevasAlertas.push({ id: docu.id, mensaje, nivel });
         });
 
         setAlertasPpa(nuevasAlertas.sort((a, b) => a.nivel - b.nivel));
-      } catch (error) {
-        console.error("Error cargando datos del dashboard:", error);
+      } catch (e) {
+        console.error("Error cargando datos del dashboard:", e);
       } finally {
         setLoading(false);
       }
