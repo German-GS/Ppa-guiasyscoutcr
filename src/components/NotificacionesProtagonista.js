@@ -1,3 +1,5 @@
+// src/components/NotificacionesProtagonista.js
+
 import React, { useEffect, useState } from "react";
 import { 
   doc, 
@@ -8,88 +10,97 @@ import {
   query,
   where,
   getDocs 
-} from "firebase/firestore"; // Todos los imports necesarios
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/authContext";
 import { BellIcon } from "@heroicons/react/24/outline";
 import Swal from "sweetalert2";
-
+import { useNavigate } from "react-router-dom"; // <-- 1. IMPORTAR useNavigate
 
 export function NotificacionesProtagonista() {
   const { user } = useAuth();
   const [notificaciones, setNotificaciones] = useState([]);
   const [abierto, setAbierto] = useState(false);
+  const navigate = useNavigate(); // <-- 2. INICIALIZAR useNavigate
 
- // En NotificacionesProtagonista.js
-useEffect(() => {
-  const cargarNotificaciones = async () => {
-    if (!user?.uid) return;
+  useEffect(() => {
+    const cargarNotificaciones = async () => {
+      if (!user?.uid) return;
+      try {
+        const q = query(
+          collection(db, `notificaciones/${user.uid}/invitaciones`),
+          where("estado", "==", "pendiente")
+        );
+        const snapshot = await getDocs(q);
+        setNotificaciones(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error("Error cargando invitaciones:", error);
+      }
+    };
+    cargarNotificaciones();
+  }, [user]);
 
+  // ▼▼▼ 3. FUNCIÓN MODIFICADA PARA MANEJAR DIFERENTES TIPOS DE NOTIFICACIÓN ▼▼▼
+  const manejarRespuesta = async (id, aceptado) => {
     try {
-      const q = query(
-        collection(db, `notificaciones/${user.uid}/invitaciones`),
-        where("estado", "==", "pendiente")
-      );
-      const snapshot = await getDocs(q);
-      setNotificaciones(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const noti = notificaciones.find(n => n.id === id);
+      if (!noti) throw new Error("Notificación no encontrada");
+
+      const notifRef = doc(db, "notificaciones", user.uid, "invitaciones", id);
+      
+      // Si se acepta una votación, simplemente redirigimos y cerramos la notificación.
+      if (aceptado && noti.tipo === 'votacion_ciclo') {
+        await updateDoc(notifRef, { estado: "visto" }); // Marcamos como vista
+        setNotificaciones(prev => prev.filter(n => n.id !== id));
+        setAbierto(false); // Cerramos el menú de notificaciones
+        navigate('/consejo-comunidad'); // Redirigimos a la página de votación
+        return; // Terminamos la ejecución aquí
+      }
+
+      // Si se rechaza una votación, solo se actualiza el estado.
+      if(!aceptado && noti.tipo === 'votacion_ciclo'){
+        await updateDoc(notifRef, { estado: "rechazado" });
+        setNotificaciones(prev => prev.filter(n => n.id !== id));
+        return;
+      }
+
+      // Lógica original para otro tipo de invitaciones (ej. unirse a la comunidad)
+      await updateDoc(notifRef, {
+        estado: aceptado ? "aceptado" : "rechazado"
+      });
+
+      if (aceptado) {
+        const perfilRef = doc(db, "users", user.uid);
+        const perfilSnap = await getDoc(perfilRef);
+        const userData = perfilSnap.exists() ? perfilSnap.data() : {};
+
+        await setDoc(doc(db, `consejeros/${noti.de}/protagonistas/${user.uid}`), {
+          uid: user.uid,
+          nombre: userData.nombre || "Sin nombre",
+          apellido: userData.apellido || "",
+          email: user.email,
+          agregadoEn: new Date()
+        });
+      }
+
+      Swal.fire({
+        title: aceptado ? "¡Invitación aceptada!" : "Invitación rechazada",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      setNotificaciones(prev => prev.filter(n => n.id !== id));
+
     } catch (error) {
-      console.error("Error cargando invitaciones:", error);
+      console.error("Error al manejar respuesta:", error);
+      Swal.fire({
+        title: "Error",
+        text: "No se pudo procesar la respuesta.",
+        icon: "error"
+      });
     }
   };
-
-  cargarNotificaciones();
-}, [user]);
-
-  const manejarRespuesta = async (id, aceptado) => {
-  try {
-    const noti = notificaciones.find(n => n.id === id);
-    if (!noti) {
-      console.error("⚠️ Notificación no encontrada");
-      return;
-    }
-
-    const notifRef = doc(db, "notificaciones", user.uid, "invitaciones", id);
-    await updateDoc(notifRef, {
-      estado: aceptado ? "aceptado" : "rechazado"
-    });
-
-    if (aceptado) {
-  // Obtener datos del usuario actual
-  const perfilRef = doc(db, "users", user.uid);
-  const perfilSnap = await getDoc(perfilRef);
-  const userData = perfilSnap.exists() ? perfilSnap.data() : {};
-
-  // Asociar protagonista con consejero
-  await setDoc(doc(db, `consejeros/${noti.de}/protagonistas/${user.uid}`), {
-    uid: user.uid,
-    nombre: userData.nombre || "Sin nombre",
-    apellido: userData.apellido || "",
-    email: user.email,
-    agregadoEn: new Date()
-  });
-}
-
-    Swal.fire({
-      title: aceptado ? "¡Invitación aceptada!" : "Invitación rechazada",
-      icon: "success",
-      timer: 1500,
-      showConfirmButton: false
-    });
-
-    // Cierra la notificación
-    setNotificaciones(prev => prev.filter(n => n.id !== id));
-
-  } catch (error) {
-    console.error("Error al manejar respuesta:", error);
-
-    Swal.fire({
-      title: "Error",
-      text: "No se pudo procesar la invitación",
-      icon: "error"
-    });
-  }
-};
-
 
   return (
     <div className="relative mr-4">

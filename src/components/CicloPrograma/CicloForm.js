@@ -272,81 +272,82 @@ export function CicloForm({ comunidadId, esSecretario = false }) {
     setModalIsOpen(true);
   };
 
-  const iniciarVotacion = async () => {
-    setIsSubmitting(true);
-    try {
-      if (!canEdit)
-        throw new Error("Solo el secretario puede someter a votación.");
-      if (!cicloData.enfasis.principal)
-        throw new Error("Selecciona un énfasis principal.");
-
-      const actividades = cicloData.cronograma || [];
-
-      // CAMBIO: Creamos la copia limpia del cronograma aquí también
-      const cleanCronograma = actividades.map(({ id, ...rest }) => rest);
-
-      if (cleanCronograma.length === 0)
-        throw new Error("Agrega al menos una actividad.");
-
-      const ref = cicloDocId
-        ? doc(db, "ciclos", cicloDocId)
-        : doc(collection(db, "ciclos"));
-
-      const total = miembros.length;
-      const requeridos = Math.max(1, Math.floor(total / 2) + 1);
-      const cierra = Timestamp.fromDate(new Date(Date.now() + 5 * 60 * 1000));
-
-      await setDoc(
-        ref,
-        {
-          ...cicloData,
-          estado: "en_votacion",
-          cronograma: cleanCronograma, // <-- Usamos la copia limpia
-          fechaCreacion: serverTimestamp(),
-          visible: false,
-          votacion: {
-            estado: "en_votacion",
-            abreEn: serverTimestamp(),
-            cierraEn: cierra,
-            totalMiembros: total,
-            requeridos,
-            aFavor: 0,
-            enContra: 0,
-          },
-        },
-        { merge: true }
-      );
-
-      if (!cicloDocId) setCicloDocId(ref.id);
-
-      // Notificaciones (esto no cambia)
-      const batch = writeBatch(db);
-      miembros.forEach((m) => {
-        const notifRef = doc(
-          collection(db, `notificaciones/${m.uid}/invitaciones`)
-        );
-        batch.set(notifRef, {
-          tipo: "votacion_ciclo",
-          cicloId: ref.id,
-          comunidadId,
-          creadorId: user.uid,
-          venceEn: cierra,
-          estado: "pendiente",
-          mensaje: `Hay una votación pendiente del ciclo de ${comunidadNombre}.`,
-          fecha: serverTimestamp(),
-        });
-      });
-      await batch.commit();
-
-      setModalIsOpen(false);
-      Swal.fire("¡Enviado!", "La propuesta se envió a votación.", "success");
-    } catch (e) {
-      console.error(e);
-      Swal.fire("Error", e.message || "No se pudo enviar a votación.", "error");
-    } finally {
-      setIsSubmitting(false);
+   const iniciarVotacion = async () => {
+  setIsSubmitting(true);
+  try {
+    if (!canEdit) {
+      throw new Error("Solo el secretario puede someter a votación.");
     }
-  };
+    if (!cicloData.enfasis.principal) {
+      throw new Error("Selecciona un énfasis principal.");
+    }
+
+    const ref = cicloDocId
+      ? doc(db, "ciclos", cicloDocId)
+      : doc(collection(db, "ciclos"));
+    
+    // El tiempo de cierre ahora es de 5 minutos para pruebas
+    const ahora = new Date();
+    const cierra = Timestamp.fromDate(new Date(ahora.getTime() + 5 * 60000));
+    
+    const cleanCronograma = cicloData.cronograma.map(({ id, ...rest }) => rest);
+
+    // 1. Guardamos el ciclo, actualizando su estado a "en_votacion"
+    await setDoc(
+      ref,
+      {
+        ...cicloData,
+        estado: "en_votacion",
+        cronograma: cleanCronograma,
+        fechaCreacion: cicloData.fechaCreacion || serverTimestamp(),
+        visible: false, // Se hará visible solo si se aprueba
+        votacion: {
+          cierraEn: cierra,
+          estado: "en_votacion",
+          requeridos: Math.floor(miembros.length / 2) + 1,
+          totalMiembros: miembros.length,
+          aFavor: 0,
+          enContra: 0,
+        },
+      },
+      { merge: true }
+    );
+
+    if (!cicloDocId) setCicloDocId(ref.id);
+
+    // --- CÓDIGO RESTAURADO ---
+    // 2. Preparamos el envío de notificaciones a TODOS los miembros
+    console.log("MIEMBROS QUE SERÁN NOTIFICADOS:", miembros);
+    const batch = writeBatch(db);
+    const mensaje = `Votación pendiente para el nuevo ciclo de ${comunidadNombre}.`;
+
+    miembros.forEach((miembro) => {
+      const notifRef = doc(collection(db, `notificaciones/${miembro.uid}/invitaciones`));
+      batch.set(notifRef, {
+        tipo: "votacion_ciclo",
+        cicloId: ref.id,
+        comunidadId,
+        creadorId: user.uid,
+        venceEn: cierra,
+        estado: "pendiente",
+        mensaje: mensaje,
+        fecha: serverTimestamp(),
+      });
+    });
+
+    // 3. Ejecutamos el batch para enviar todas las notificaciones a la vez
+    await batch.commit();
+    // --- FIN DEL CÓDIGO RESTAURADO ---
+
+    setModalIsOpen(false);
+    Swal.fire("¡Enviado!", "La propuesta se envió a votación a toda la comunidad.", "success");
+  } catch (e) {
+    console.error("Error al iniciar votación:", e);
+    Swal.fire("Error", e.message || "No se pudo enviar a votación.", "error");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   if (loading) return <div className="text-center p-10">Cargando…</div>;
   const soloLectura = !canEdit;
