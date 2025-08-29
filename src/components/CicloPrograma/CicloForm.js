@@ -42,10 +42,14 @@ export function CicloForm({ comunidadId, esSecretario = false }) {
     estado: "borrador",
     secretarioId: user?.uid || "",
     comunidadId: comunidadId || "",
+    fechaInicio: "",
+    fechaFin: "",
     año: new Date().getFullYear(),
     cicloNumero: 1,
     evaluacionAnterior: {},
     enfasis: { principal: "", secundario: "" },
+    objetivoGeneral: "",
+    objetivosEspecificos: [{ texto: "" }],
     cronograma: [],
     solicitudesJunta: "",
   });
@@ -211,6 +215,32 @@ export function CicloForm({ comunidadId, esSecretario = false }) {
     }
   };
 
+  const handleObjetivoEspecificoChange = (index, value) => {
+    const nuevosObjetivos = [...cicloData.objetivosEspecificos];
+    nuevosObjetivos[index].texto = value;
+    setCicloData((prev) => ({
+      ...prev,
+      objetivosEspecificos: nuevosObjetivos,
+    }));
+  };
+
+  const agregarObjetivoEspecifico = () => {
+    setCicloData((prev) => ({
+      ...prev,
+      objetivosEspecificos: [...prev.objetivosEspecificos, { texto: "" }],
+    }));
+  };
+
+  const eliminarObjetivoEspecifico = (index) => {
+    const nuevosObjetivos = cicloData.objetivosEspecificos.filter(
+      (_, i) => i !== index
+    );
+    setCicloData((prev) => ({
+      ...prev,
+      objetivosEspecificos: nuevosObjetivos,
+    }));
+  };
+
   // CAMBIO: Agregamos el nuevo manejador para Agendar
   const handleCronogramaUpdate = (nuevasActividades) => {
     setCicloData((prev) => ({
@@ -262,92 +292,106 @@ export function CicloForm({ comunidadId, esSecretario = false }) {
   };
 
   const abrirPreview = () => {
-    // CORRECCIÓN: Leemos el cronograma desde el estado
     const acts = cicloData.cronograma || [];
     setPreview({
+      // Datos que ya tenías
       enfasis: cicloData.enfasis,
       solicitudesJunta: cicloData.solicitudesJunta,
       cronograma: acts,
+
+      // ▼▼▼ AÑADIR ESTAS LÍNEAS ▼▼▼
+      fechaInicio: cicloData.fechaInicio,
+      fechaFin: cicloData.fechaFin,
+      objetivoGeneral: cicloData.objetivoGeneral,
+      objetivosEspecificos: cicloData.objetivosEspecificos,
     });
     setModalIsOpen(true);
   };
 
-   const iniciarVotacion = async () => {
-  setIsSubmitting(true);
-  try {
-    if (!canEdit) {
-      throw new Error("Solo el secretario puede someter a votación.");
-    }
-    if (!cicloData.enfasis.principal) {
-      throw new Error("Selecciona un énfasis principal.");
-    }
+  const iniciarVotacion = async () => {
+    setIsSubmitting(true);
+    try {
+      if (!canEdit) {
+        throw new Error("Solo el secretario puede someter a votación.");
+      }
+      if (!cicloData.enfasis.principal) {
+        throw new Error("Selecciona un énfasis principal.");
+      }
 
-    const ref = cicloDocId
-      ? doc(db, "ciclos", cicloDocId)
-      : doc(collection(db, "ciclos"));
-    
-    // El tiempo de cierre ahora es de 5 minutos para pruebas
-    const ahora = new Date();
-    const cierra = Timestamp.fromDate(new Date(ahora.getTime() + 5 * 60000));
-    
-    const cleanCronograma = cicloData.cronograma.map(({ id, ...rest }) => rest);
+      const ref = cicloDocId
+        ? doc(db, "ciclos", cicloDocId)
+        : doc(collection(db, "ciclos"));
 
-    // 1. Guardamos el ciclo, actualizando su estado a "en_votacion"
-    await setDoc(
-      ref,
-      {
-        ...cicloData,
-        estado: "en_votacion",
-        cronograma: cleanCronograma,
-        fechaCreacion: cicloData.fechaCreacion || serverTimestamp(),
-        visible: false, // Se hará visible solo si se aprueba
-        votacion: {
-          cierraEn: cierra,
+      // El tiempo de cierre ahora es de 5 minutos para pruebas
+      const ahora = new Date();
+      const cierra = Timestamp.fromDate(new Date(ahora.getTime() + 5 * 60000));
+
+      const cleanCronograma = cicloData.cronograma.map(
+        ({ id, ...rest }) => rest
+      );
+
+      // 1. Guardamos el ciclo, actualizando su estado a "en_votacion"
+      await setDoc(
+        ref,
+        {
+          ...cicloData,
           estado: "en_votacion",
-          requeridos: Math.floor(miembros.length / 2) + 1,
-          totalMiembros: miembros.length,
-          aFavor: 0,
-          enContra: 0,
+          cronograma: cleanCronograma,
+          fechaCreacion: cicloData.fechaCreacion || serverTimestamp(),
+          visible: false, // Se hará visible solo si se aprueba
+          votacion: {
+            cierraEn: cierra,
+            estado: "en_votacion",
+            requeridos: Math.floor(miembros.length / 2) + 1,
+            totalMiembros: miembros.length,
+            aFavor: 0,
+            enContra: 0,
+          },
         },
-      },
-      { merge: true }
-    );
+        { merge: true }
+      );
 
-    if (!cicloDocId) setCicloDocId(ref.id);
+      if (!cicloDocId) setCicloDocId(ref.id);
 
-    // --- CÓDIGO RESTAURADO ---
-    // 2. Preparamos el envío de notificaciones a TODOS los miembros
-    console.log("MIEMBROS QUE SERÁN NOTIFICADOS:", miembros);
-    const batch = writeBatch(db);
-    const mensaje = `Votación pendiente para el nuevo ciclo de ${comunidadNombre}.`;
+      // --- CÓDIGO RESTAURADO ---
+      // 2. Preparamos el envío de notificaciones a TODOS los miembros
+      console.log("MIEMBROS QUE SERÁN NOTIFICADOS:", miembros);
+      const batch = writeBatch(db);
+      const mensaje = `Votación pendiente para el nuevo ciclo de ${comunidadNombre}.`;
 
-    miembros.forEach((miembro) => {
-      const notifRef = doc(collection(db, `notificaciones/${miembro.uid}/invitaciones`));
-      batch.set(notifRef, {
-        tipo: "votacion_ciclo",
-        cicloId: ref.id,
-        comunidadId,
-        creadorId: user.uid,
-        venceEn: cierra,
-        estado: "pendiente",
-        mensaje: mensaje,
-        fecha: serverTimestamp(),
+      miembros.forEach((miembro) => {
+        const notifRef = doc(
+          collection(db, `notificaciones/${miembro.uid}/invitaciones`)
+        );
+        batch.set(notifRef, {
+          tipo: "votacion_ciclo",
+          cicloId: ref.id,
+          comunidadId,
+          creadorId: user.uid,
+          venceEn: cierra,
+          estado: "pendiente",
+          mensaje: mensaje,
+          fecha: serverTimestamp(),
+        });
       });
-    });
 
-    // 3. Ejecutamos el batch para enviar todas las notificaciones a la vez
-    await batch.commit();
-    // --- FIN DEL CÓDIGO RESTAURADO ---
+      // 3. Ejecutamos el batch para enviar todas las notificaciones a la vez
+      await batch.commit();
+      // --- FIN DEL CÓDIGO RESTAURADO ---
 
-    setModalIsOpen(false);
-    Swal.fire("¡Enviado!", "La propuesta se envió a votación a toda la comunidad.", "success");
-  } catch (e) {
-    console.error("Error al iniciar votación:", e);
-    Swal.fire("Error", e.message || "No se pudo enviar a votación.", "error");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+      setModalIsOpen(false);
+      Swal.fire(
+        "¡Enviado!",
+        "La propuesta se envió a votación a toda la comunidad.",
+        "success"
+      );
+    } catch (e) {
+      console.error("Error al iniciar votación:", e);
+      Swal.fire("Error", e.message || "No se pudo enviar a votación.", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading) return <div className="text-center p-10">Cargando…</div>;
   const soloLectura = !canEdit;
@@ -368,55 +412,163 @@ export function CicloForm({ comunidadId, esSecretario = false }) {
       </div>
 
       <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
+        {/* --- SECCIÓN 1: Propuesta del Ciclo (Agrupa Fechas, Énfasis y Objetivos) --- */}
         <section>
           <h2 className="text-xl font-semibold text-scout-secondary mb-4 border-b pb-2">
-            1. Propuesta y Selección de Énfasis
+            1. Propuesta del Ciclo
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">
-                Énfasis Principal *
-              </label>
-              <select
-                name="enfasis.principal"
-                value={cicloData.enfasis.principal}
-                onChange={handleChange}
-                className="border-input w-full"
-                required
-                disabled={soloLectura}
-              >
-                <option value="">-- Selecciona un área --</option>
-                {areasDeCrecimiento.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.titulo}
-                  </option>
-                ))}
-              </select>
+
+          {/* Subsección de Fechas */}
+          <div className="mb-6">
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Rango de Fechas del Ciclo
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">
+                  Fecha de Inicio *
+                </label>
+                <input
+                  type="date"
+                  name="fechaInicio"
+                  value={cicloData.fechaInicio}
+                  onChange={handleChange}
+                  className="border-input w-full"
+                  required
+                  disabled={soloLectura}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">
+                  Fecha de Fin *
+                </label>
+                <input
+                  type="date"
+                  name="fechaFin"
+                  value={cicloData.fechaFin}
+                  onChange={handleChange}
+                  className="border-input w-full"
+                  required
+                  disabled={soloLectura}
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">
-                Énfasis Secundario
-              </label>
-              <select
-                name="enfasis.secundario"
-                value={cicloData.enfasis.secundario}
-                onChange={handleChange}
-                className="border-input w-full"
-                disabled={soloLectura}
-              >
-                <option value="">-- Selecciona un área (opcional) --</option>
-                {areasDeCrecimiento
-                  .filter((a) => a.id !== cicloData.enfasis.principal)
-                  .map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.titulo}
+          </div>
+
+          {/* Subsección de Énfasis */}
+          <div className="mb-6">
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Énfasis del Ciclo
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">
+                  Énfasis Principal *
+                </label>
+                <select
+                  name="enfasis.principal"
+                  value={cicloData.enfasis.principal}
+                  onChange={handleChange}
+                  className="border-input w-full"
+                  required
+                  disabled={soloLectura}
+                >
+                  <option value="">-- Selecciona un área --</option>
+                  {areasDeCrecimiento.map((area) => (
+                    <option key={area.id} value={area.id}>
+                      {area.titulo}
                     </option>
                   ))}
-              </select>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">
+                  Énfasis Secundario
+                </label>
+                <select
+                  name="enfasis.secundario"
+                  value={cicloData.enfasis.secundario}
+                  onChange={handleChange}
+                  className="border-input w-full"
+                  disabled={soloLectura}
+                >
+                  <option value="">-- Selecciona un área (opcional) --</option>
+                  {areasDeCrecimiento
+                    .filter((a) => a.id !== cicloData.enfasis.principal)
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.titulo}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Subsección de Objetivos */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Objetivos del Ciclo
+            </label>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-600 mb-1">
+                Objetivo General *
+              </label>
+              <textarea
+                name="objetivoGeneral"
+                value={cicloData.objetivoGeneral}
+                onChange={handleChange}
+                rows="2"
+                className="border-input w-full"
+                placeholder="Describe el propósito principal de este ciclo"
+                required
+                disabled={soloLectura}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">
+                Objetivos Específicos
+              </label>
+              <div className="space-y-2">
+                {cicloData.objetivosEspecificos.map((obj, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={obj.texto}
+                      onChange={(e) =>
+                        handleObjetivoEspecificoChange(index, e.target.value)
+                      }
+                      className="border-input w-full"
+                      placeholder={`Objetivo específico #${index + 1}`}
+                      disabled={soloLectura}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => eliminarObjetivoEspecifico(index)}
+                      className="btn-secondary bg-red-500 text-white hover:bg-red-600 px-3 py-2"
+                      disabled={
+                        soloLectura ||
+                        cicloData.objetivosEspecificos.length <= 1
+                      }
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={agregarObjetivoEspecifico}
+                className="btn-secondary mt-2"
+                disabled={soloLectura}
+              >
+                + Agregar Objetivo
+              </button>
             </div>
           </div>
         </section>
 
+        {/* --- SECCIÓN 2: Evaluación del Ciclo Anterior --- */}
         <section>
           <h2 className="text-xl font-semibold text-scout-secondary mb-4 border-b pb-2">
             2. Evaluación del Ciclo Anterior
@@ -436,11 +588,11 @@ export function CicloForm({ comunidadId, esSecretario = false }) {
           )}
         </section>
 
+        {/* --- SECCIÓN 3: Cronograma de Actividades --- */}
         <section>
           <h2 className="text-xl font-semibold text-scout-secondary mb-4 border-b pb-2">
             3. Cronograma de Actividades
           </h2>
-          {/* CAMBIO: Se actualiza el componente Agendar para usar props en vez de ref */}
           <Agendar
             initialData={cicloData.cronograma}
             onUpdate={handleCronogramaUpdate}
@@ -450,6 +602,7 @@ export function CicloForm({ comunidadId, esSecretario = false }) {
           />
         </section>
 
+        {/* --- SECCIÓN 4: Solicitudes a la Junta de Grupo --- */}
         <section>
           <h2 className="text-xl font-semibold text-scout-secondary mb-4 border-b pb-2">
             4. Solicitudes a la Junta de Grupo
@@ -465,6 +618,7 @@ export function CicloForm({ comunidadId, esSecretario = false }) {
           />
         </section>
 
+        {/* --- Botones de Acción --- */}
         {canEdit && (
           <div className="flex justify-end gap-4 pt-4">
             <button

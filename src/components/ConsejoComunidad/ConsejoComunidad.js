@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Navbar } from "../Navbar/Navbar";
 import { CicloActivoVista } from "../CicloPrograma/CicloActivoVista";
+import { EvaluacionCiclo } from "../CicloPrograma/EvaluacionCiclo";
 import comunidadIcon from "../../img/COMUNIDAD-ICONO-1.png";
 import { useAuth } from "../../context/authContext";
 import { db } from "../../firebase";
@@ -20,6 +21,7 @@ import {
 } from "firebase/firestore";
 import { CicloForm } from "../CicloPrograma/CicloForm";
 import { VotarCiclo } from "../CicloPrograma/VotarCiclo";
+import Swal from "sweetalert2";
 
 export function ConsejoComunidad() {
   const { user } = useAuth();
@@ -28,6 +30,7 @@ export function ConsejoComunidad() {
   const [loading, setLoading] = useState(true);
   const [comunidadId, setComunidadId] = useState(null);
   const [modoCreacion, setModoCreacion] = useState(false);
+  const [evaluandoCiclo, setEvaluandoCiclo] = useState(null);
 
   // Estados para manejar el ciclo y la votación
   const [cicloActivo, setCicloActivo] = useState(null);
@@ -36,18 +39,25 @@ export function ConsejoComunidad() {
   const [miVoto, setMiVoto] = useState(null);
   const [cargandoVoto, setCargandoVoto] = useState(true);
 
-  // useEffect para verificar el rol del usuario (sin cambios)
   useEffect(() => {
     if (!user) {
       setLoading(false);
       return;
     }
-    const step = async (label, p) => {
-      // ... (código de step sin cambios)
-    };
+
     async function encontrarConsejeroPorProtagonista(db, protagonistaUid) {
-      // ... (código de encontrarConsejero sin cambios)
+      const q = query(
+        collectionGroup(db, "protagonistas"),
+        where("uid", "==", protagonistaUid)
+      );
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        return doc.ref.parent.parent.id;
+      }
+      return null;
     }
+
     const verificarRolDirecto = async () => {
       setLoading(true);
       try {
@@ -85,6 +95,10 @@ export function ConsejoComunidad() {
             idResuelto = idPerfil || uid;
           }
         }
+        console.log(
+          "[ConsejoComunidad] Comunidad ID resuelta para este usuario:",
+          idResuelto
+        );
         setEsSecretario(flagSecretario);
         setComunidadId(idResuelto);
       } catch (err) {
@@ -97,11 +111,9 @@ export function ConsejoComunidad() {
     verificarRolDirecto();
   }, [user]);
 
-  // useEffects para cargar datos del ciclo y votación
   useEffect(() => {
     if (!comunidadId) return;
 
-    // Cargar info de la comunidad (nombre y miembros)
     const fetchComunidadInfo = async () => {
       try {
         const comDoc = await getDoc(doc(db, "comunidades", comunidadId));
@@ -118,7 +130,6 @@ export function ConsejoComunidad() {
     };
     fetchComunidadInfo();
 
-    // Listener para el ciclo activo o en votación
     const ciclosRef = collection(db, "ciclos");
     const q = query(
       ciclosRef,
@@ -128,21 +139,24 @@ export function ConsejoComunidad() {
       limit(1)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const cicloDoc = snapshot.docs[0];
-        setCicloActivo({ id: cicloDoc.id, ...cicloDoc.data() });
-      } else {
-        setCicloActivo(null);
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const cicloDoc = snapshot.docs[0];
+          setCicloActivo({ id: cicloDoc.id, ...cicloDoc.data() });
+        } else {
+          setCicloActivo(null);
+        }
+      },
+      (error) => {
+        console.error("Error al escuchar el ciclo:", error);
       }
-    }, (error) => {
-      console.error("Error al escuchar el ciclo:", error);
-    });
+    );
 
     return () => unsubscribe();
   }, [comunidadId]);
 
-  // Listener para verificar si el usuario actual ya votó
   useEffect(() => {
     if (
       !user?.uid ||
@@ -164,7 +178,6 @@ export function ConsejoComunidad() {
     return () => unsubscribe();
   }, [user?.uid, cicloActivo]);
 
-  // --- SUBMENU RESTAURADO ---
   const SubMenu = () => (
     <nav className="bg-white shadow-md rounded-lg p-2 mb-8 flex flex-wrap justify-center items-center gap-2 sm:gap-4">
       <button
@@ -206,99 +219,125 @@ export function ConsejoComunidad() {
     </nav>
   );
 
-  // Lógica de renderizado actualizada
- // Reemplaza tu función renderVista completa con esta
-const renderVista = () => {
-  if (loading) {
-    return <p className="p-4">Verificando permisos...</p>;
-  }
+  const handleSaveEvaluacion = async (cicloId, data) => {
+    try {
+      const cicloRef = doc(db, "ciclos", cicloId);
+      await updateDoc(cicloRef, {
+        estado: "evaluado",
+        evaluacion: data,
+      });
+      setEvaluandoCiclo(null); // Cierra el modal
+      Swal.fire(
+        "¡Guardado!",
+        "La evaluación se ha guardado correctamente.",
+        "success"
+      );
+    } catch (error) {
+      console.error("Error al guardar la evaluación:", error);
+      Swal.fire("Error", "No se pudo guardar la evaluación.", "error");
+    }
+  };
 
-  // Si el secretario activa el modo de creación, mostramos el formulario
-  if (modoCreacion && esSecretario) {
-    return (
-      <>
-        <CicloForm comunidadId={comunidadId} esSecretario={true} />
-        <div className="p-4 text-center">
-          <button className="btn-secondary" onClick={() => setModoCreacion(false)}>
-            Ver Ciclo Activo
-          </button>
-        </div>
-      </>
-    );
-  }
+  const renderVista = () => {
+    if (loading) {
+      return <p className="p-4">Verificando permisos...</p>;
+    }
 
-  switch (vistaActual) {
-    case "ciclo":
-      // PRIORIDAD 1: Revisar si ya existe un ciclo activo o en votación
-      if (cicloActivo) {
-        // CASO A: El ciclo está ACTIVO
-        if (cicloActivo.estado === "activo") {
-          return (
-            <div>
-              <CicloActivoVista ciclo={cicloActivo} />
-              {/* Mostramos el botón solo al secretario */}
-              {esSecretario && (
-                <div className="p-4 text-center border-t mt-4">
-                  <button className="btn-primary" onClick={() => setModoCreacion(true)}>
-                    Crear Nuevo Ciclo
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        }
+    if (modoCreacion && esSecretario) {
+      return (
+        <>
+          <CicloForm comunidadId={comunidadId} esSecretario={true} />
+          <div className="p-4 text-center">
+            <button
+              className="btn-secondary"
+              onClick={() => setModoCreacion(false)}
+            >
+              Ver Ciclo Activo
+            </button>
+          </div>
+        </>
+      );
+    }
 
-        // CASO B: El ciclo está EN VOTACIÓN (ahora visible para el secretario)
-        if (cicloActivo.estado === "en_votacion") {
-          if (cargandoVoto) {
-            return <p className="p-4 text-center">Verificando tu estado de votación...</p>;
-          }
-          if (miVoto) {
+    switch (vistaActual) {
+      case "ciclo":
+        if (cicloActivo) {
+          if (cicloActivo.estado === "activo") {
             return (
-              <div className="p-8 text-center bg-blue-50 border border-blue-200 rounded-lg m-4">
-                <h3 className="text-xl font-bold text-blue-800">¡Gracias por tu voto!</h3>
-                <p className="text-blue-700 mt-2">
-                  Esperando que el resto de la comunidad vote. El resultado se mostrará aquí cuando la votación finalice.
-                </p>
+              <div>
+                <CicloActivoVista
+                  ciclo={cicloActivo}
+                  onEvaluar={setEvaluandoCiclo}
+                />
+                {esSecretario && (
+                  <div className="p-4 text-center border-t mt-4">
+                    <button
+                      className="btn-primary"
+                      onClick={() => setModoCreacion(true)}
+                    >
+                      Crear Nuevo Ciclo
+                    </button>
+                  </div>
+                )}
               </div>
             );
           }
-          return (
-            <div className="p-4 md:p-8">
-              <VotarCiclo
-                ciclo={cicloActivo}
-                comunidadNombre={comunidadNombre}
-                miembrosNombres={miembrosNombres}
-              />
-            </div>
-          );
+
+          if (cicloActivo.estado === "en_votacion") {
+            if (cargandoVoto) {
+              return (
+                <p className="p-4 text-center">
+                  Verificando tu estado de votación...
+                </p>
+              );
+            }
+            if (miVoto) {
+              return (
+                <div className="p-8 text-center bg-blue-50 border border-blue-200 rounded-lg m-4">
+                  <h3 className="text-xl font-bold text-blue-800">
+                    ¡Gracias por tu voto!
+                  </h3>
+                  <p className="text-blue-700 mt-2">
+                    Esperando que el resto de la comunidad vote. El resultado se
+                    mostrará aquí cuando la votación finalice.
+                  </p>
+                </div>
+              );
+            }
+            return (
+              <div className="p-4 md:p-8">
+                <VotarCiclo
+                  ciclo={cicloActivo}
+                  comunidadNombre={comunidadNombre}
+                  miembrosNombres={miembrosNombres}
+                />
+              </div>
+            );
+          }
         }
-      }
 
-      // PRIORIDAD 2: Si NO hay ciclo, decidimos según el rol
-      if (esSecretario) {
-        return <CicloForm comunidadId={comunidadId} esSecretario={true} />;
-      }
+        if (esSecretario) {
+          return <CicloForm comunidadId={comunidadId} esSecretario={true} />;
+        }
 
-      // Para miembros normales sin ciclo activo
-      return (
-        <div className="p-4 text-center text-gray-500">
-          <h2 className="font-bold text-lg">Ciclo de Programa</h2>
-          <p>Actualmente no hay ningún ciclo activo o en votación.</p>
-        </div>
-      );
+        return (
+          <div className="p-4 text-center text-gray-500">
+            <h2 className="font-bold text-lg">Ciclo de Programa</h2>
+            <p>Actualmente no hay ningún ciclo activo o en votación.</p>
+          </div>
+        );
 
-    default:
-      return (
-        <div className="p-4">
-          <h2>
-            {vistaActual.charAt(0).toUpperCase() + vistaActual.slice(1)}
-          </h2>
-          <p>Módulo próximamente.</p>
-        </div>
-      );
-  }
-};
+      default:
+        return (
+          <div className="p-4">
+            <h2>
+              {vistaActual.charAt(0).toUpperCase() + vistaActual.slice(1)}
+            </h2>
+            <p>Módulo próximamente.</p>
+          </div>
+        );
+    }
+  };
 
   return (
     <div className="bg-fondo-claro min-h-screen">
@@ -319,6 +358,14 @@ const renderVista = () => {
           {renderVista()}
         </div>
       </main>
+
+      {evaluandoCiclo && (
+        <EvaluacionCiclo
+          ciclo={evaluandoCiclo}
+          onClose={() => setEvaluandoCiclo(null)}
+          onSave={handleSaveEvaluacion}
+        />
+      )}
     </div>
   );
 }
