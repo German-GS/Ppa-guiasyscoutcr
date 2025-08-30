@@ -1,70 +1,41 @@
+// en: src/components/Home/Home.js
+
 import React, { useState, useRef, useEffect } from "react";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { db } from "../../firebase";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  orderBy,
+  limit,
+  getDocs,
+} from "firebase/firestore";
+import { db, updatePpa, uploadFile } from "../../firebase";
 import { useAuth } from "../../context/authContext";
 import { Navbar } from "../Navbar/Navbar";
 import { ListPpa } from "../ListPpa/ListPpa";
-import { InputForm } from "../InputForm/InputForm";
-import { savePpa, updatePpa } from "../../firebase";
-import { Agendar } from "../Agendar/Agendar";
 import Swal from "sweetalert2";
-import Modal from "react-modal";
 import "../../index.css";
-import comunidadIcon from "../../img/COMUNIDAD-ICONO-1.png";
-import { BrujulaCrecimiento } from "../AreasCrecimiento/AreasCrecimiento";
+import comunidadIcon from "../../img/Raiders.conFondo.png";
+import { BrujulaForm } from "./BrujulaForm";
+import { BitacoraExplorador } from "../BitacoraExplorador/BitacoraExplorador";
 
 export function Home() {
   const { loading, user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentPpaId, setCurrentPpaId] = useState(null);
+  const [currentBitacoraId, setCurrentBitacoraId] = useState(null);
+  const [currentEntradaId, setCurrentEntradaId] = useState(null);
   const [perfilInicializado, setPerfilInicializado] = useState(false);
-  const [durationModalIsOpen, setDurationModalIsOpen] = useState(false);
-  const [pendingPpaData, setPendingPpaData] = useState(null);
-  const [customDate, setCustomDate] = useState("");
-  const [actividades, setActividades] = useState([]);
+  const [initialBrujulaData, setInitialBrujulaData] = useState(null);
+  const [initialBitacoraData, setInitialBitacoraData] = useState(null);
 
-  const refs = {
-    suenos: useRef(),
-    retos: useRef(),
-    fortalezas: useRef(),
-    brujula: useRef(),
-  };
-
-  const fieldTitles = {
-    suenos: "Sueños",
-    retos: "Retos",
-    fortalezas: "Fortalezas",
-  };
-
-  const fieldPlaceholders = {
-    suenos: "Ej: Liderar una expedición scout",
-    retos: "Ej: Aprender a hacer nudos avanzados",
-    fortalezas: "Ej: Buen trabajo en equipo",
-  };
-
-  const handleActividadesUpdate = (nuevasActividades) => {
-    setActividades(nuevasActividades);
-  };
-
-  const loadPpaForEditing = async (ppa) => {
-    try {
-      const docRef = doc(db, "PPA", ppa.id);
-      const docSnap = await getDoc(docRef);
-      if (!docSnap.exists()) throw new Error("El PPA no existe");
-      const freshData = docSnap.data();
-      setIsEditing(true);
-      setCurrentPpaId(ppa.id);
-      refs.suenos.current?.setInputs(freshData.suenos || []);
-      refs.retos.current?.setInputs(freshData.retos || []);
-      refs.fortalezas.current?.setInputs(freshData.fortalezas || []);
-      refs.actividad.current?.setValues(freshData.actividad || []);
-      refs.brujula.current?.reset();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (error) {
-      Swal.fire("Error", "No se pudo cargar el PPA para edición", "error");
-    }
-  };
+  const brujulaRef = useRef();
+  const bitacoraRef = useRef();
 
   useEffect(() => {
     const inicializarPerfil = async () => {
@@ -98,302 +69,217 @@ export function Home() {
     inicializarPerfil();
   }, [user?.uid, perfilInicializado]);
 
-  const handleSavePpa = async (event) => {
-    event.preventDefault();
-    const getValuesFromRef = (ref) => {
-      return ref.current?.getValues ? ref.current.getValues() : [];
-    };
-
-    // CAMBIO 5: Obtenemos las actividades desde el estado, no de la ref
-    const ppaDataBase = {
-      suenos: getValuesFromRef(refs.suenos),
-      retos: getValuesFromRef(refs.retos),
-      fortalezas: getValuesFromRef(refs.fortalezas),
-      actividad: actividades, // <-- Usamos el estado
-    };
-
-    const brujulaObjectives = getValuesFromRef(refs.brujula);
-    const finalPpaData = {
-      ...ppaDataBase,
-      ...brujulaObjectives,
-      userId: user.uid,
-    };
-    if (isEditing) {
-      setIsSubmitting(true);
-      try {
-        await updatePpa(currentPpaId, finalPpaData);
-        Swal.fire(
-          "¡Actualizado!",
-          "Tu PPA se ha actualizado correctamente.",
-          "success"
-        );
-      } catch (error) {
-        Swal.fire(
-          "Error",
-          error.message || "Ocurrió un error al actualizar",
-          "error"
-        );
-      } finally {
-        setIsSubmitting(false);
-      }
-    } else {
-      setPendingPpaData(finalPpaData);
-      setDurationModalIsOpen(true);
-    }
-  };
-
-  // ▼▼▼ FUNCIÓN DE CONFIRMACIÓN MODIFICADA CON VALIDACIÓN ▼▼▼
-  const handleConfirmAndSave = async ({ months, date }) => {
-    if (!pendingPpaData) return;
-
-    let fechaDeVigencia;
-
-    if (date) {
-      // --- 1. Verificación de la fecha manual ---
-      const today = new Date();
-      // Ajustamos 'hoy' para que represente el inicio del día (medianoche)
-      today.setHours(0, 0, 0, 0);
-
-      // El input de fecha devuelve un string "YYYY-MM-DD". Al pasarlo a new Date(),
-      // puede interpretarlo como UTC. Para evitar problemas de zona horaria,
-      // creamos la fecha de una manera que respete la zona horaria local.
-      const dateParts = date.split("-");
-      const selectedDate = new Date(
-        dateParts[0],
-        dateParts[1] - 1,
-        dateParts[2]
-      );
-
-      if (selectedDate < today) {
-        Swal.fire(
-          "Fecha inválida",
-          "No puedes seleccionar una fecha anterior a hoy.",
-          "error"
-        );
-        return; // Detiene la ejecución
-      }
-      fechaDeVigencia = selectedDate;
-    } else if (months) {
-      fechaDeVigencia = new Date();
-      fechaDeVigencia.setMonth(fechaDeVigencia.getMonth() + months);
-    } else {
-      Swal.fire(
-        "Atención",
-        "Por favor, selecciona una fecha límite.",
-        "warning"
-      );
-      return;
-    }
-
-    setDurationModalIsOpen(false);
-    setIsSubmitting(true);
-
-    const finalPpaDataWithDate = {
-      ...pendingPpaData,
-      fechaDeVigencia: fechaDeVigencia,
-    };
-
+  const loadBitacoraForEditing = async (bitacora) => {
     try {
-      const result = await savePpa(finalPpaDataWithDate);
-      setCurrentPpaId(result.id);
+      const q = query(
+        collection(db, "PPA", bitacora.id, "entradas"),
+        orderBy("fecha", "desc"),
+        limit(1)
+      );
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty)
+        throw new Error("Esta bitácora no tiene entradas para editar.");
+
+      const ultimaEntrada = snapshot.docs[0];
+      const data = ultimaEntrada.data();
+
       setIsEditing(true);
-      Swal.fire("¡Éxito!", "Tu PPA se ha registrado correctamente.", "success");
+      setCurrentBitacoraId(bitacora.id);
+      setCurrentEntradaId(ultimaEntrada.id);
+
+      setInitialBrujulaData({
+        autoconciencia: data.autoconciencia,
+        autovaloracion: data.autovaloracion,
+        autodireccion: data.autodireccion,
+      });
+      setInitialBitacoraData(data.bitacoraExplorador);
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
       Swal.fire(
         "Error",
-        error.message || "Ocurrió un error al guardar",
+        "No se pudo cargar la bitácora para edición. " + error.message,
+        "error"
+      );
+    }
+  };
+
+  const handleSave = async (event) => {
+    event.preventDefault();
+    const respuestasBrujula = brujulaRef.current?.getValues();
+    const evaluacionBitacora = bitacoraRef.current?.getValues();
+
+    if (!respuestasBrujula || !evaluacionBitacora) return;
+
+    setIsSubmitting(true);
+
+    const entradaData = {
+      ...respuestasBrujula,
+      bitacoraExplorador: evaluacionBitacora,
+      fecha: serverTimestamp(),
+      userId: user.uid,
+    };
+
+    try {
+      if (isEditing) {
+        const entradaRef = doc(
+          db,
+          "PPA",
+          currentBitacoraId,
+          "entradas",
+          currentEntradaId
+        );
+        await updateDoc(entradaRef, entradaData);
+        Swal.fire("¡Actualizada!", "Tu reflexión ha sido guardada.", "success");
+      } else {
+        const bitacoraRef = await addDoc(collection(db, "PPA"), {
+          userId: user.uid,
+          createdAt: serverTimestamp(),
+          titulo: `Bitácora del ${new Date().toLocaleDateString()}`,
+        });
+        await addDoc(collection(bitacoraRef, "entradas"), entradaData);
+        Swal.fire("¡Guardada!", "Tu nueva bitácora ha sido creada.", "success");
+      }
+      resetForm();
+    } catch (error) {
+      Swal.fire(
+        "Error",
+        "No se pudo guardar tu reflexión. " + error.message,
         "error"
       );
     } finally {
       setIsSubmitting(false);
-      setPendingPpaData(null);
-      setCustomDate("");
+    }
+  };
+
+  const handleGuardarInforme = async ({
+    desafioId,
+    titulo,
+    notas,
+    archivo,
+  }) => {
+    if (!user || !currentBitacoraId || !currentEntradaId) {
+      Swal.fire(
+        "Error",
+        "No se ha seleccionado una bitácora para editar.",
+        "error"
+      );
+      return;
+    }
+
+    try {
+      let imageUrl = "";
+      if (archivo) {
+        // Creamos una ruta única para el archivo
+        const filePath = `informes/${
+          user.uid
+        }/${currentBitacoraId}/${Date.now()}_${archivo.name}`;
+        imageUrl = await uploadFile(archivo, filePath);
+      }
+
+      const informeRef = doc(
+        db,
+        "PPA",
+        currentBitacoraId,
+        "entradas",
+        currentEntradaId,
+        "informes",
+        desafioId
+      );
+
+      await setDoc(
+        informeRef,
+        {
+          titulo,
+          notas,
+          imageUrl,
+          completadoEn: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      Swal.fire(
+        "¡Informe Guardado!",
+        "Tu avance en el desafío ha sido registrado.",
+        "success"
+      );
+    } catch (error) {
+      console.error("Error guardando el informe:", error);
+      Swal.fire("Error", "No se pudo guardar tu informe.", "error");
     }
   };
 
   const resetForm = () => {
     setIsEditing(false);
-    setCurrentPpaId(null);
-    refs.suenos.current?.setInputs([]);
-    refs.retos.current?.setInputs([]);
-    refs.fortalezas.current?.setInputs([]);
-
-    // CAMBIO 6: Reseteamos el estado en lugar de la ref
-    setActividades([]);
-
-    refs.brujula.current?.reset();
+    setCurrentBitacoraId(null);
+    setCurrentEntradaId(null);
+    setInitialBrujulaData(null);
+    setInitialBitacoraData(null);
   };
+
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-scout"></div>
-      </div>
-    );
+    return <div className="text-center p-10">Cargando...</div>;
   }
 
-  // --- 2. Variable para obtener la fecha de hoy en formato YYYY-MM-DD ---
-  const todayString = new Date().toISOString().split("T")[0];
-
   return (
-    <div className="bg-white text-gray-800 w-full">
+    <div className="bg-fondo w-full min-h-screen">
       <Navbar />
       <div className="max-w-screen-lg mx-auto p-4">
-        {/* ... (resto del JSX sin cambios hasta el modal) ... */}
-
         <div className="flex items-center justify-between mb-6 mt-5">
-          <h1 className="text-3xl font-bold text-scout">
-            {isEditing ? "Modificar mi PPA" : "Crear mi PPA"}
+          <h1 className="text-3xl font-bold text-principal">
+            {isEditing
+              ? "Editando mi Bitácora"
+              : "Mi Brújula de Autodescubrimiento"}
           </h1>
           <img src={comunidadIcon} alt="Comunidad" className="w-12 h-12 ml-4" />
         </div>
 
-        <div className="space-y-12">
-          <div className="bg-white shadow-lg rounded-xl p-6 border">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {["suenos", "retos", "fortalezas"].map((key) => (
-                <div
-                  key={key}
-                  className="bg-gray-50 p-4 rounded-lg border border-gray-200"
-                >
-                  <h2 className="text-lg font-bold text-scout mb-3 border-b border-gray-300 pb-2">
-                    {fieldTitles[key]}
-                  </h2>
-                  <InputForm
-                    ref={refs[key]}
-                    placeholder={fieldPlaceholders[key]}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <BrujulaCrecimiento ref={refs.brujula} />
-          </div>
+        <div className="space-y-8">
+          <BrujulaForm ref={brujulaRef} initialData={initialBrujulaData} />
+          <BitacoraExplorador
+            ref={bitacoraRef}
+            initialData={initialBitacoraData}
+          />
         </div>
 
-        <form
-          id="ppa-form"
-          onSubmit={handleSavePpa}
-          className="mt-12 space-y-12 bg-white shadow-lg rounded-xl p-6 border"
-        >
-          <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-            <h2 className="text-2xl font-bold text-scout mb-4">
-              Mi Plan de Acción
-            </h2>
-            <Agendar
-              initialData={actividades}
-              onUpdate={handleActividadesUpdate}
-            />
-          </div>
-          <div className="flex flex-col md:flex-row justify-center items-center gap-4 mt-8">
+        <div className="flex justify-center mt-8 gap-4">
+          <button
+            onClick={handleSave}
+            disabled={isSubmitting}
+            className="btn-primary w-full md:w-auto px-8 py-3 disabled:opacity-50"
+          >
+            {isSubmitting
+              ? "Guardando..."
+              : isEditing
+              ? "Actualizar Bitacora"
+              : "Guardar Bitacora"}
+          </button>
+          {isEditing && (
             <button
-              type="submit"
-              disabled={isSubmitting}
-              className="btn-primary w-full md:w-auto px-8 py-3 disabled:opacity-50"
+              type="button"
+              onClick={resetForm}
+              className="px-8 py-3 bg-gray-500 text-white font-medium rounded-lg transition-colors hover:bg-gray-600"
             >
-              {isSubmitting ? (
-                <>
-                  <span className="inline-block animate-spin mr-2">↻</span>
-                  {isEditing ? "Actualizando..." : "Registrando..."}
-                </>
-              ) : isEditing ? (
-                "Actualizar PPA"
-              ) : (
-                "Registrar PPA"
-              )}
+              Cancelar Edición
             </button>
-            {isEditing && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-8 py-3 bg-gray-500 text-white font-medium rounded-lg transition-colors hover:bg-gray-600"
-              >
-                Crear un PPA Nuevo
-              </button>
-            )}
-          </div>
-        </form>
+          )}
+        </div>
 
         <div id="ppa-list" className="mt-16">
-          <hr className="mb-6 border-gray-300" />
-          <h2 className="text-2xl font-bold mb-4 text-scout text-center">
-            Mis Progresos
+          <hr className="mb-6 border-borde" />
+          <h2 className="text-2xl font-bold mb-4 text-principal text-center">
+            Mis Bitácoras Anteriores
           </h2>
-          <ListPpa onEditPpa={loadPpaForEditing} />
+          <ListPpa onEditPpa={loadBitacoraForEditing} />
         </div>
       </div>
 
-      <Modal
-        isOpen={durationModalIsOpen}
-        onRequestClose={() => setDurationModalIsOpen(false)}
-        contentLabel="Definir Vigencia del PPA"
-        className="fixed inset-0 flex items-center justify-center p-4"
-        overlayClassName="fixed inset-0 bg-black bg-opacity-60"
-      >
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-sm w-full text-center">
-          <h2 className="text-2xl font-bold text-scout mb-6">
-            Define la Vigencia de tu PPA
-          </h2>
-          <p className="text-gray-600 mb-8">
-            Selecciona una duración o establece una fecha límite para tu Plan.
-          </p>
-          <div className="space-y-4">
-            <button
-              onClick={() => handleConfirmAndSave({ months: 2 })}
-              className="w-full btn-primary"
-            >
-              Bimestral (2 meses)
-            </button>
-            <button
-              onClick={() => handleConfirmAndSave({ months: 4 })}
-              className="w-full btn-primary"
-            >
-              Cuatrimestral (4 meses)
-            </button>
-            <button
-              onClick={() => handleConfirmAndSave({ months: 6 })}
-              className="w-full btn-primary"
-            >
-              Semestral (6 meses)
-            </button>
-
-            <div className="relative flex py-5 items-center">
-              <div className="flex-grow border-t border-gray-400"></div>
-              <span className="flex-shrink mx-4 text-gray-400">O</span>
-              <div className="flex-grow border-t border-gray-400"></div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={customDate}
-                min={todayString} // <-- 3. Atributo min añadido
-                onChange={(e) => setCustomDate(e.target.value)}
-                className="border-input flex-grow"
-              />
-              <button
-                onClick={() => handleConfirmAndSave({ date: customDate })}
-                className="btn-secondary flex-shrink-0"
-                style={{ padding: "0.625rem" }}
-              >
-                Fijar
-              </button>
-            </div>
-
-            <button
-              onClick={() => setDurationModalIsOpen(false)}
-              className="w-full mt-6 text-gray-500 hover:text-gray-800"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      </Modal>
-      <footer className="bg-scout text-white text-center py-4 mt-10">
+      <footer className="bg-principal text-white text-center py-4 mt-10">
         <div className="container mx-auto px-4">
           <p className="text-sm">
-            Herramienta Digital de PPA · Desarrollado por German García Siles ·
-            &copy; 2025 v2.0
+            Herramienta Digital · Desarrollado por German García Siles · &copy;
+            2025
           </p>
         </div>
       </footer>

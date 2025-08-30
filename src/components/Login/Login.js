@@ -5,7 +5,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Alert } from "../Alert.js";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
-import ImgComunidad from "../../img/COMUNIDAD-ICONO-4.png";
+import ImgComunidad from "../../img/Raiders.sinFondo.png";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import styles from "./Login.module.css";

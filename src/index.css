@@ -6,52 +6,45 @@
 @tailwind utilities;
 
 /* ================================================= */
-/* 2. Estilos y variables globales                   */
+/* 2. Estilos y variables (Tema "Furia del Berserker") */
 /* ================================================= */
 @layer base {
-  /* Aquí movemos tus variables de color de App.css */
   :root {
-    /* 🎨 Colores institucionales principales */
-    --color-rojo-scout: #ed1a39;
-    --color-morado-principal: #2c1261;
-    --color-verde-tropa: #04bc99;
-    --color-amarillo-manada: #fec20e;
-    --color-naranja-comunidad: #ffa400;
-    --color-celeste-caminantes: #9bcfff;
-    --color-vino-clan: #6b184e;
+    /* 🎨 Paleta Principal "Furia del Berserker" */
+    --color-principal-claro: #3498db; /* Azul Tormenta */
+    --color-principal: #093e59; /* Azul Profundo */
+    --color-secundario: #2ecc71; /* Verde Esmeralda */
+    --color-acento: #e67e22; /* Naranja Fuego */
+    --color-acento-oscuro: #d35400; /* Naranja Ascua */
 
-    /* 🌫️ Colores neutros y fondos */
-    --color-white: #ffffff;
-    --color-blanco: #ffffff;
-    --color-fondo-claro: #f7f8fa;
-    --color-gray-50: #f9fafb;
-    --color-gray-100: #f3f4f6;
-    --color-gray-200: #e5e7eb;
-    --color-gray-700: #374151;
-    --color-gray-800: #1f2937;
-    --color-gray-900: #111827;
+    /* 🌫️ Colores Neutros */
+    --color-fondo: #ecf0f1; /* Gris Niebla Clara */
+    --color-superficie: #ffffff; /* Blanco Nieve */
+    --color-borde: #bdc3c7; /* Gris Roca */
+    --color-texto-principal: #34495e; /* Gris Oscuro */
+    --color-texto-secundario: #7f8c8d; /* Gris Medio */
 
-    /* ✅ Colores de feedback */
-    --color-success: #10b981;
-    --color-exito: #10b981;
-    --color-error: #250606;
-    --color-warning: #f59e0b;
-    --color-info: #3b82f6;
-
-    /* Alias útiles */
-    --color-scout-orange: var(--color-naranja-comunidad);
-
-    /* 🎯 Alias y colores por rol */
-    --color-scout: var(--color-rojo-scout);
-    --color-scout-secondary: var(--color-naranja-comunidad);
-    --color-scout-dark: #b3152c;
+    /* ✅ Colores de Feedback */
+    --color-exito: #2ecc71; /* Verde Esmeralda */
+    --color-error: #e74c3c; /* Rojo Furia */
+    --color-advertencia: #f1c40f; /* Amarillo Runa */
+    /* ================================================================ */
+    /* LEGACY - Mapeo de los nombres viejos a los nuevos (para compatibilidad) */
+    /* ================================================================ */
+    --color-morado-principal: var(--color-principal);
+    --color-rojo-scout: var(--color-acento);
+    --color-scout-dark: var(--color-acento-oscuro);
+    --color-scout-secondary: var(--color-advertencia);
+    --color-naranja-comunidad: var(--color-acento);
+    --color-verde-tropa: var(--color-exito);
   }
 
   body {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--color-fondo);
+    color: var(--color-texto-principal);
   }
 }
-
 /* =================================================================== */
 /* 3. Definición de componentes reutilizables con @apply             */
 /* =================================================================== */
@@ -90,6 +83,10 @@
     font-weight: 700;
     border-radius: 0.5rem;
     transition: background-color 0.3s ease;
+  }
+
+  .bg-superficie {
+    background-color: var(--color-superficie);
   }
 
   /* Botón Principal Primario (Rojo) - Reescribiendo sin @apply */
