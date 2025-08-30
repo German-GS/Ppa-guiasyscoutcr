@@ -54,6 +54,10 @@
     @apply bg-white rounded-lg shadow-md p-4;
   }
 
+  .txt-color-inst {
+    color: var(--color-principal);
+  }
+
   /* Clase para los campos de entrada de formularios */
   .border-input {
     display: block;
@@ -83,6 +87,14 @@
     font-weight: 700;
     border-radius: 0.5rem;
     transition: background-color 0.3s ease;
+  }
+
+  .bg-inst {
+    background-color: var(--color-principal);
+  }
+
+  .bg-inst-claro {
+    background-color: var(--color-principal-claro);
   }
 
   .bg-superficie {

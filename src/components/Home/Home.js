@@ -1,4 +1,4 @@
-// en: src/components/Home/Home.js
+// en: src/components/Home/Home.js (Versión Final Corregida)
 
 import React, { useState, useRef, useEffect } from "react";
 import {
@@ -14,10 +14,11 @@ import {
   limit,
   getDocs,
 } from "firebase/firestore";
+// ▼▼▼ 1. Quitamos la importación incorrecta de aquí ▼▼▼
 import { db, updatePpa, uploadFile } from "../../firebase";
 import { useAuth } from "../../context/authContext";
 import { Navbar } from "../Navbar/Navbar";
-import { ListPpa } from "../ListPpa/ListPpa";
+import { ListBitacoras } from "../ListBitacora/ListBitacoras";
 import Swal from "sweetalert2";
 import "../../index.css";
 import comunidadIcon from "../../img/Raiders.conFondo.png";
@@ -153,25 +154,22 @@ export function Home() {
     }
   };
 
-  const handleGuardarInforme = async ({
-    desafioId,
-    titulo,
-    notas,
-    archivo,
-  }) => {
-    if (!user || !currentBitacoraId || !currentEntradaId) {
+  const handleGuardarInforme = async (informeData) => {
+    // Verificamos que estemos en modo edición para tener los IDs necesarios
+    if (!isEditing || !user || !currentBitacoraId || !currentEntradaId) {
       Swal.fire(
         "Error",
-        "No se ha seleccionado una bitácora para editar.",
+        "Debes estar editando una bitácora para registrar un informe.",
         "error"
       );
       return;
     }
 
     try {
+      const { desafioId, titulo, notas, archivo } = informeData;
       let imageUrl = "";
+
       if (archivo) {
-        // Creamos una ruta única para el archivo
         const filePath = `informes/${
           user.uid
         }/${currentBitacoraId}/${Date.now()}_${archivo.name}`;
@@ -240,6 +238,7 @@ export function Home() {
           <BitacoraExplorador
             ref={bitacoraRef}
             initialData={initialBitacoraData}
+            onSaveInforme={handleGuardarInforme}
           />
         </div>
 
@@ -271,7 +270,7 @@ export function Home() {
           <h2 className="text-2xl font-bold mb-4 text-principal text-center">
             Mis Bitácoras Anteriores
           </h2>
-          <ListPpa onEditPpa={loadBitacoraForEditing} />
+          <ListBitacoras onEditBitacora={loadBitacoraForEditing} />
         </div>
       </div>
 

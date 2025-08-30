@@ -41,9 +41,8 @@ export function Navbar({ fixed }) {
   };
 
   return (
-    <nav className="relative flex flex-wrap items-center justify-between px-2 py-3 bg-scout mb-3">
+    <nav className="relative flex flex-wrap items-center justify-between px-2 py-3 bg-inst-claro mb-3">
       <div className="container px-4 mx-auto flex flex-wrap items-center justify-between">
-        {/* ... (código del brand y botón de menú sin cambios) ... */}
         <div className="w-full relative flex justify-between lg:w-auto lg:static lg:block lg:justify-start">
           <div className="flex items-center space-x-2">
             {user && user.photoURL ? (
